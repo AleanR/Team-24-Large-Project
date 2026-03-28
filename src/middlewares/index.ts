@@ -1,25 +1,23 @@
-import { getUserBySessionToken } from '../db/users';
-import express from 'express';
-import { get, merge } from 'lodash';
+import { Response, NextFunction } from 'express';
+import { verifyToken } from '../helpers/jwt';
+import { AuthenticatedRequest } from '../helpers/auth';
 
-export const isAuthenticated = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+
+export const isAuthenticated = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const sessionToken = req.cookies['BEN-AUTH'];
+        const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
 
-        if (!sessionToken) {
-            return res.sendStatus(403);
+        if (!token) {
+            return res.status(401).json({ message: "Unauthorized!" });
         }
 
-        const existingUser = await getUserBySessionToken(sessionToken);
+        const decoded = await verifyToken(token);
 
-        if (!existingUser)
-            return res.sendStatus(403);
+        req.user = decoded;
 
-        merge (req, { identity: existingUser });
-
-        return next();
+        next();
     } catch (error) {
         console.log(error);
-        return res.sendStatus(400);
+        return res.sendStatus(401).json({ message: "Invalid or expired token!"});
     }
 }
