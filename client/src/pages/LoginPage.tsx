@@ -26,7 +26,7 @@ function LoginPage() {
     
 
     try {
-    const response = await fetch('/auth/login', {
+    onst response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
