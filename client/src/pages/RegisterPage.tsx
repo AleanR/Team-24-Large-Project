@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-function LoginPage() {
+function RegisterPage() {
   const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
+    firstname: '',
+    lastname: '',
+    username: '',
+    ucfID: '',
+    major: '',
     email: '',
     password: '',
   })
@@ -25,7 +30,7 @@ function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8080/auth/login', {
+      const response = await fetch('http://localhost:8080/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,11 +40,11 @@ function LoginPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Login failed. Check your credentials.')
+        throw new Error('Registration failed.')
       }
 
       await response.json()
-      navigate('/home')
+      navigate('/')
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message)
@@ -52,7 +57,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-3">
@@ -74,7 +79,62 @@ function LoginPage() {
         </div>
 
         <div className="bg-zinc-900/95 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm font-semibold mb-2">First Name</label>
+              <input
+                name="firstname"
+                type="text"
+                value={formData.firstname}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">Last Name</label>
+              <input
+                name="lastname"
+                type="text"
+                value={formData.lastname}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">Username</label>
+              <input
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">UCF ID</label>
+              <input
+                name="ucfID"
+                type="text"
+                value={formData.ucfID}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">Major</label>
+              <input
+                name="major"
+                type="text"
+                value={formData.major}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-semibold mb-2">UCF Email</label>
               <input
@@ -105,13 +165,13 @@ function LoginPage() {
               disabled={loading}
               className="w-full rounded-lg bg-yellow-400 text-black font-semibold py-3 hover:brightness-95 transition disabled:opacity-60"
             >
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? 'Signing Up...' : 'Sign Up'}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <Link to="/register" className="text-yellow-400 font-semibold hover:underline">
-              Need an account? Sign up
+          <div className="mt-6 text-center">
+            <Link to="/login" className="text-yellow-400 font-semibold hover:underline">
+              Already have an account? Sign in
             </Link>
           </div>
 
@@ -128,4 +188,4 @@ function LoginPage() {
   )
 }
 
-export default LoginPage
+export default RegisterPage
