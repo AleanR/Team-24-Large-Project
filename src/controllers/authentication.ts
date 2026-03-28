@@ -1,77 +1,87 @@
-import express from 'express';
+import { Request, Response } from 'express';
 import { createUser, getUserByEmail } from '../db/users';
-import { authentication, random } from '../helpers';
+import { comparePassword, hashPassword } from '../helpers';
+import { createToken } from '../helpers/jwt';
+import { UserModel } from '../db/users';
 
-export const login = async (req: express.Request, res: express.Response) => {
+export const login = async (req: Request, res: Response) => {
     try {
         const {email, password} = req.body;
 
         if (!email || !password) {
-            return res.sendStatus(400);
+            return res.status(400).json({ message: "Email and password required!"});
         }
 
-        const user = await getUserByEmail(email).select('+authentication.salt +authentication.password');
+        const user = await getUserByEmail(email).select('+authentication.password');
 
         if (!user) {
-            return res.sendStatus(400);
+            return res.sendStatus(400).json({ message: "Invalid credentials!"});
         }
 
-        if (!user.authentication || !user.authentication.salt || !user.authentication.password) {
-            return res.sendStatus(500);
-        }
+        const isMatch = await comparePassword(password, user.authentication!.password);
 
-        const expectedHash = authentication(user.authentication.salt, password);
+        if (!isMatch)
+            return res.status(400).json({ message: "Invalid credentials!"});
 
-        if (user.authentication.password !== expectedHash) {
-            return res.sendStatus(403);
-        }
+        const token = await createToken(user._id.toString(), user.email);
 
-        const salt = random();
-        user.authentication.sessionToken = authentication(salt, user._id.toString());
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+        });
 
-        await user.save();
-
-        res.cookie('BEN-AUTH', user.authentication.sessionToken, { domain: 'localhost', path: '/' });
-
-        return res.status(200).json(user).end();
+        return res.status(200).json(user);
     } catch (error) {
         console.log(error);
-        return res.sendStatus(400);
+        return res.sendStatus(400).json({ message: "Server error"});
     }
 }
 
-export const register = async (req: express.Request, res: express.Response) => {
+export const register = async (req: Request, res: Response) => {
     try {
         const { firstname, lastname, ucfID, major, email, password, username } = req.body;
 
         if (!firstname || !lastname || !ucfID || !major || !email || !password || !username) {
-            return res.sendStatus(400);
+            return res.sendStatus(400).json({ message: "Missing required field(s)"});
         }
 
-        const existingUser = await getUserByEmail(email);
+        const existingUser = await UserModel.findOne({
+            $or: [{ email }, { ucfID }, { username }]
+        });
 
         if (existingUser) {
-            return res.sendStatus(400);
+            return res.sendStatus(400).json({ message: "User with provided email, username or UCF ID already exists"});
         }
 
-        const salt = random();
+        const hashedPass = await hashPassword(password);
+
         const user = await createUser({
             firstname,
             lastname,
             ucfID,
             major,
+            pointBalance: 0,
+            createdAt: new Date(Date.now()),
+            updatedAt: new Date(Date.now()),
             email,
             username,
             authentication: {
-                salt,
-                password: authentication(salt, password),
+                password: hashedPass,
             },
         });
 
-        return res.status(200).json(user).end();
+        const token = await createToken(user._id.toString(), user.email);
+
+
+        return res.status(200).json({
+            message: "User created successfully!",
+            user,
+            token,
+        });
             
     } catch (error) {
         console.log(error);
-        return res.sendStatus(400);
+        return res.sendStatus(400).json({ message: "Internal server error"});
     }
 }

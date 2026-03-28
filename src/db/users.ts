@@ -4,13 +4,19 @@ const UserSchema = new mongoose.Schema({
     firstname: { type: String, required: true },
     lastname: { type: String, required: true },
     ucfID: { type: String, required: true },
+    pointBalance: { type: Number, required: false },
     major: { type: String, required: true },
     username: { type: String, required: true },
     email: { type: String, required: true },
+    createdAt: { type: Date, required: true },
+    updatedAt: { type: Date, required: true },
     authentication: {
-        password: { type: String, required: true, select: false },
-        salt: { type: String, select: false },
-        sessionToken: { type: String, select: false }
+        type: {
+            password: { type: String, required: true, select: false },
+            resetPasswordToken: { type: String, select: false },
+            resetPasswordExpires: { type: Date },
+        },
+        required: true,
     },
 });
 
@@ -18,12 +24,11 @@ export const UserModel = mongoose.model('User', UserSchema);
 
 export const getUsers = () => UserModel.find();
 export const getUserByEmail = (email: string) => UserModel.findOne({ email });
-export const getUserBySessionToken = (sessionToken: string) => UserModel.findOne({ 
-    'authentication.sessionToken': sessionToken
-});
 
 export const getUserById = (id: string) => UserModel.findById(id);
-export const createUser = (values: Record<string, any>) => new UserModel(values).save().then((user) => user.toObject());
+export const createUser = (values: Record<string, any>) => UserModel.create(values);
 
-export const deleteUserById = (id: string) => UserModel.findOneAndDelete({ _id: id });
-export const updateUserById = (id: string, values: Record<string, any>) => UserModel.findByIdAndUpdate(id, values);
+export const deleteUserById = (id: string) => UserModel.deleteOne({ _id: id });
+export const updateUserById = (id: string, values: Record<string, any>) => UserModel.findByIdAndUpdate(id, values, { new: true, runValidator: true });
+
+export const getUserbyToken = (token: Record<string, any>) => UserModel.findOne(token);
