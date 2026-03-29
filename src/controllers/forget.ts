@@ -2,7 +2,11 @@ import { AuthenticatedRequest } from "../helpers/auth";
 import { getUserByEmail } from "../db/users";
 import { Response } from 'express';
 import { genResetToken } from "../helpers/index";
+import dotenv from 'dotenv';
+import { sendPassResetToken } from "../services/email";
 
+
+dotenv.config();
 
 export const forgotPass = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -22,6 +26,8 @@ export const forgotPass = async (req: AuthenticatedRequest, res: Response) => {
         await user.save();
 
         const resetURL = `http://localhost:8080/reset-password/${resetToken}`;
+
+        await sendPassResetToken(user.email, resetURL);
 
         return res.json({
             message: "Reset token generated",

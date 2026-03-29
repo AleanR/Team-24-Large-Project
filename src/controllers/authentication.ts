@@ -3,6 +3,7 @@ import { createUser, getUserByEmail } from '../db/users';
 import { comparePassword, hashPassword } from '../helpers';
 import { createToken } from '../helpers/jwt';
 import { UserModel } from '../db/users';
+import { sendEmailVerifOTP } from '../services/email';
 
 export const login = async (req: Request, res: Response) => {
     try {
@@ -23,12 +24,17 @@ export const login = async (req: Request, res: Response) => {
         if (!isMatch)
             return res.status(401).json({ message: "Invalid credentials!"});
 
+        if (user.isVerified === false) {
+            return res.status(423).json({ message: "Account not verified or locked!"});
+        }
+        
         const token = await createToken(user._id.toString(), user.email);
 
         res.cookie("token", token, {
             httpOnly: true,
             secure: false,
-            sameSite: "lax",
+            sameSite: "strict",
+            maxAge: 3600000,
         });
 
         return res.status(200).json(user);
@@ -63,6 +69,7 @@ export const register = async (req: Request, res: Response) => {
             major,
             pointBalance: 0,
             email,
+            isVerified: false,
             username,
             authentication: {
                 password: hashedPass,
@@ -71,15 +78,29 @@ export const register = async (req: Request, res: Response) => {
 
         const token = await createToken(user._id.toString(), user.email);
 
+        const otpUrl = `http://localhost:8080/verify-email?token=${token}`;
+
+        await sendEmailVerifOTP(user.email, otpUrl);
+
 
         return res.status(201).json({
-            message: "User created successfully!",
-            user,
-            token,
+            message: "Email Verification OTP Sent!",
+            otpUrl,
+            token,  // COMMENT OUT DURING DEPLOYMENT
         });
             
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Internal server error"});
     }
+}
+
+export const logout = async (req: Request, res: Response) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+    });
+
+    res.status(200).json({ message: "User logged out successfully" });
 }
