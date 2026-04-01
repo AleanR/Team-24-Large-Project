@@ -9,7 +9,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
         const { token } = req.query;
 
         if (!token || typeof token !== "string") {
-            return res.status(400).json({ message: "Invalid token" });
+            return res.status(401).json({ message: "Invalid token" });
         }
 
         const decoded = await verifyToken(token);
@@ -17,7 +17,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
         const user = await getUserById(decoded.id);
 
         if (!user) {
-            return res.status(400).json({ message: "User not found" });
+            return res.status(404).json({ message: "User not found" });
         }
 
         user.isVerified = true;
@@ -27,6 +27,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.log(error);
-        return res.status(400).json({ message: "Token expired or invalid" });
+        return res.status(401).json({ message: "Token expired or invalid" });
     }
 }
