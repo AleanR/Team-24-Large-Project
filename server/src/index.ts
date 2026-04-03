@@ -29,7 +29,7 @@ server.listen(8080, () => {
 });
 
 mongoose.Promise = Promise;
-mongoose.connect(process.env.MONGO_DB_URI!);
+mongoose.connect(process.env.MONGODB_URI!);
 
 mongoose.connection.on('error', (error: Error) => console.log(error));
 
