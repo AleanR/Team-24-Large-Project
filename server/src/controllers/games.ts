@@ -79,7 +79,7 @@ export const addGame = async (req: AuthenticatedRequest, res: Response) => {
             return res.status(400).json({ message: "Missing required field(s)" });
         }
 
-        if (Array.isArray(homeTeam) || Array.isArray(awayTeam)) {
+        if (typeof homeTeam !== 'string' || typeof awayTeam !== 'string') {
             return res.status(400).json({ message: "Team names must be string"});
         }
 
