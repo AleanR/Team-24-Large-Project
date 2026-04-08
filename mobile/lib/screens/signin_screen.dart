@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/auth_shell.dart';
 import '../widgets/np_button.dart';
 import '../widgets/np_text_field.dart';
+import '../widgets/dev_bypass_button.dart'; // ✅ DEV
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
