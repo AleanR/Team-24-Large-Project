@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { getUserById } from '../users/users.model';
 import { getGameById } from '../games/games.model';
 import { createBet } from '../bets/bets.model';
+import { getGameStatus } from '../../helpers/status';
 
 export async function placeBet (userId: string, stake: number, legs: any) {
 
@@ -25,8 +26,13 @@ export async function placeBet (userId: string, stake: number, legs: any) {
                 throw new Error ('Invalid bet data');
 
             const game = await getGameById(leg.gameId.toString()).session(session);
+
             if (!game) throw new Error('Game not found');
-            if (game.status === 'finished' || game.status === 'cancelled') throw new Error('Game already expired');
+
+            // Check for game status by comparing betting window to real-time
+            const status = getGameStatus(game);
+            if (status === 'cancelled') throw new Error('Game is cancelled');
+            if (status !== 'upcoming') throw new Error('Betting window closed');
 
             if (leg.team === 'home') {
                 game.numBettorsHome += 1;
