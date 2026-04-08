@@ -1,6 +1,7 @@
 // lib/utils/app_router.dart
 import 'package:flutter/material.dart';
 import '../screens/landing_screen.dart';
+import '../screens/signin_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/welcome_screen.dart';
 
@@ -18,7 +19,7 @@ class AppRouter {
         return _fade(WelcomeScreen(username: username));
 
       case '/signin':
-        return _slide(const _PlaceholderScreen(title: 'Sign In'));
+        return _slide(const SignInScreen());
 
       case '/home':
         return _fade(const _PlaceholderScreen(title: 'Events'));
