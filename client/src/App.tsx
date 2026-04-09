@@ -13,6 +13,7 @@ const RedeemPointsPage = lazy(() => import('./pages/RedeemPointsPage'))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/profile/:id" element={<UserProfilePage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

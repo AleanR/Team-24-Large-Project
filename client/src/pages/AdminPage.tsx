@@ -36,7 +36,7 @@ function AdminPage() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' })
+        const res = await fetch('/api/users/me', { credentials: 'include' })
         if (!res.ok) { navigate('/login'); return; }
         const data = await res.json()
         if (!data.isAdmin) { navigate('/'); return; }

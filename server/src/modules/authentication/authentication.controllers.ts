@@ -24,9 +24,9 @@ export const login = async (req: Request, res: Response) => {
             return res.status(401).json({ message: "Invalid credentials!"});
 
         if (user.isVerified === false) {
-            // For testing purposes, auto-verify the account
-            user.isVerified = true;
-            await user.save();
+            return res.status(403).json({
+                message: "Please verify your email before signing in.",
+            });
         }
         
         const token = await createToken(user._id.toString(), user.email);
@@ -38,7 +38,10 @@ export const login = async (req: Request, res: Response) => {
             maxAge: 3600000,
         });
 
-        return res.status(200).json(user);
+        return res.status(200).json({
+            ...user.toObject(),
+            token,
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Server error"});
@@ -79,7 +82,8 @@ export const register = async (req: Request, res: Response) => {
 
         const token = await createToken(user._id.toString(), user.email);
 
-        const otpUrl = `http://localhost:8080/users/auth/verify-email?token=${token}`;
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const otpUrl = `${clientUrl}/verify-email?token=${token}`;
 
         await sendEmailVerifOTP(user.email, otpUrl);
 

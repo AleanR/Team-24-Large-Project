@@ -1,3 +1,3 @@
 class ApiConstants {
-  static const baseUrl = 'http://localhost:8080';
+  static const baseUrl = 'http://localhost:8080/api';
 }

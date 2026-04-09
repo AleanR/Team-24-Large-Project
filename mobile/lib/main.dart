@@ -2,7 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:app_links/app_links.dart';
+
 import 'core/routing/app_router.dart';
+import 'core/storage/secure_storage_service.dart';
+import 'modules/auth/data/auth_api_service.dart';
+import 'modules/auth/data/auth_repository.dart';
+import 'modules/auth/presentation/controllers/auth_controller.dart';
 import 'shared/theme/app_theme.dart';
 
 void main() {
@@ -31,10 +36,22 @@ class NitroPicksApp extends StatefulWidget {
 class _NitroPicksAppState extends State<NitroPicksApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final AppLinks _appLinks;
+  late final AuthRepository _authRepository;
+  late final AuthController _authController;
+  late final AppRouter _appRouter;
 
   @override
   void initState() {
     super.initState();
+    _authRepository = AuthRepository(
+      apiService: AuthApiService(),
+      storageService: SecureStorageService(),
+    );
+    _authController = AuthController();
+    _appRouter = AppRouter(
+      authRepository: _authRepository,
+      authController: _authController,
+    );
     _appLinks = AppLinks();
     _appLinks.uriLinkStream.listen((uri) {
       if (uri.scheme == 'nitropicks' && uri.host == 'verify-email') {
@@ -53,7 +70,7 @@ class _NitroPicksAppState extends State<NitroPicksApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       navigatorKey: _navigatorKey,
-      onGenerateRoute: AppRouter.generateRoute,
+      onGenerateRoute: _appRouter.generateRoute,
       initialRoute: '/',
     );
   }
