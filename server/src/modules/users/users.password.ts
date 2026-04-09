@@ -26,7 +26,8 @@ export const forgotPass = async (req: AuthenticatedRequest, res: Response) => {
 
         await user.save();
 
-        const resetURL = `http://localhost:8080/users/auth/reset-password/${resetToken}`;
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const resetURL = `${clientUrl}/reset-password/${resetToken}`;
 
         await sendPassResetToken(user.email, resetURL);
 
@@ -77,4 +78,3 @@ export const resetPass = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Internal server error"});
     }
 }
-

@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../data/auth_repository.dart';
+import '../../domain/auth_state.dart';
 import '../../domain/ucf_majors.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/sign_up_controller.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/auth_shell.dart';
 import '../../../../shared/widgets/np_button.dart';
@@ -10,7 +14,14 @@ import '../../../../shared/widgets/np_text_field.dart';
 import '../../../../shared/widgets/step_indicator.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final AuthRepository authRepository;
+  final AuthController authController;
+
+  const SignUpScreen({
+    super.key,
+    required this.authRepository,
+    required this.authController,
+  });
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -18,21 +29,17 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen>
     with SingleTickerProviderStateMixin {
-  int _step = 0;
+  late final SignUpController _controller;
 
+  int _step = 0;
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   final _ucfId = TextEditingController();
-
-  final _passwordError = ValueNotifier<String?>('');
-  final _passwordSuccess = ValueNotifier<String?>('');
-  final _emailError = ValueNotifier<String?>('');
   final _majorNotifier = ValueNotifier<String?>(null);
-
-  bool _isLoading = false;
+  bool _showEmailError = false;
 
   late AnimationController _cardCtrl;
   late Animation<double> _cardFade;
@@ -53,6 +60,22 @@ class _SignUpScreenState extends State<SignUpScreen>
   @override
   void initState() {
     super.initState();
+    _controller = SignUpController(
+      authRepository: widget.authRepository,
+      authController: widget.authController,
+    )..addListener(_handleControllerChanged);
+
+    for (final listenable in [
+      _firstName,
+      _lastName,
+      _email,
+      _password,
+      _confirmPassword,
+      _ucfId,
+      _majorNotifier,
+    ]) {
+      listenable.addListener(_refresh);
+    }
 
     _cardCtrl = AnimationController(
       vsync: this,
@@ -64,30 +87,13 @@ class _SignUpScreenState extends State<SignUpScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOutCubic));
     _cardCtrl.forward();
-
-    _confirmPassword.addListener(_validatePasswords);
-    _password.addListener(_validatePasswords);
-  }
-
-  void _validatePasswords() {
-    final p = _password.text;
-    final c = _confirmPassword.text;
-    if (c.isEmpty) {
-      _passwordError.value = null;
-      _passwordSuccess.value = null;
-      return;
-    }
-    if (p == c) {
-      _passwordError.value = null;
-      _passwordSuccess.value = 'Passwords match.';
-    } else {
-      _passwordError.value = 'Passwords must match.';
-      _passwordSuccess.value = null;
-    }
   }
 
   @override
   void dispose() {
+    _controller
+      ..removeListener(_handleControllerChanged)
+      ..dispose();
     _cardCtrl.dispose();
     _firstName.dispose();
     _lastName.dispose();
@@ -95,36 +101,60 @@ class _SignUpScreenState extends State<SignUpScreen>
     _password.dispose();
     _confirmPassword.dispose();
     _ucfId.dispose();
-    _passwordError.dispose();
-    _passwordSuccess.dispose();
-    _emailError.dispose();
     _majorNotifier.dispose();
     super.dispose();
   }
 
-  Future<void> _nextStep() async {
-    if (_step == 0 && !_email.text.contains('@ucf.edu')) {
-      _emailError.value = 'Must be a valid UCF email address.';
+  void _refresh() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _handleControllerChanged() {
+    if (!mounted) {
       return;
     }
-    _emailError.value = null;
+
+    if (_controller.state.status == AuthStatus.verificationPending) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/verify-email-pending',
+        arguments: _controller.state.email ?? _email.text.trim(),
+      );
+    } else {
+      setState(() {});
+    }
+  }
+
+  SignUpFormData get _formData => SignUpFormData(
+        firstName: _firstName.text,
+        lastName: _lastName.text,
+        email: _email.text,
+        password: _password.text,
+        confirmPassword: _confirmPassword.text,
+        ucfId: _ucfId.text,
+        major: _majorNotifier.value,
+      );
+
+  Future<void> _nextStep() async {
+    if (_step == 0) {
+      final emailError = _controller.validateEmailStep(_email.text);
+      if (emailError != null) {
+        setState(() => _showEmailError = true);
+        return;
+      }
+      _showEmailError = false;
+    }
 
     if (_step < 2) {
       await _cardCtrl.reverse();
       setState(() => _step++);
       _cardCtrl.forward();
-    } else {
-      setState(() => _isLoading = true);
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) {
-        // Account created — go to "check your email" screen
-        Navigator.pushReplacementNamed(
-          context,
-          '/verify-email-pending',
-          arguments: _email.text.trim(),
-        );
-      }
+      return;
     }
+
+    await _controller.register(_formData);
   }
 
   void _prevStep() {
@@ -164,17 +194,16 @@ class _SignUpScreenState extends State<SignUpScreen>
                   child: _buildCard(),
                 ),
               ),
+              if (_controller.errorMessage != null) ...[
+                const SizedBox(height: 16),
+                AuthMessage(text: _controller.errorMessage!, isError: true),
+              ],
               const SizedBox(height: 18),
               _StepButton(
                 step: _step,
-                isLoading: _isLoading,
-                firstName: _firstName,
-                lastName: _lastName,
-                email: _email,
-                password: _password,
-                confirmPassword: _confirmPassword,
-                ucfId: _ucfId,
-                majorNotifier: _majorNotifier,
+                isLoading: _controller.isLoading,
+                form: _formData,
+                controller: _controller,
                 onPressed: _nextStep,
               ),
               const SizedBox(height: 18),
@@ -237,14 +266,18 @@ class _SignUpScreenState extends State<SignUpScreen>
           firstName: _firstName,
           lastName: _lastName,
           email: _email,
-          emailError: _emailError,
+          emailError: _showEmailError
+              ? _controller.validateEmailStep(_email.text)
+              : null,
         );
       case 1:
         return _Step2(
           password: _password,
           confirmPassword: _confirmPassword,
-          passwordError: _passwordError,
-          passwordSuccess: _passwordSuccess,
+          passwordError: _controller.validatePasswordMatch(
+            password: _password.text,
+            confirmPassword: _confirmPassword.text,
+          ),
         );
       case 2:
         return _Step3(
@@ -261,7 +294,7 @@ class _Step1 extends StatelessWidget {
   final TextEditingController firstName;
   final TextEditingController lastName;
   final TextEditingController email;
-  final ValueNotifier<String?> emailError;
+  final String? emailError;
 
   const _Step1({
     required this.firstName,
@@ -289,15 +322,12 @@ class _Step1 extends StatelessWidget {
           textCapitalization: TextCapitalization.words,
         ),
         const SizedBox(height: 18),
-        ValueListenableBuilder<String?>(
-          valueListenable: emailError,
-          builder: (_, err, __) => NpTextField(
-            label: 'UCF Email',
-            hint: 'knight@ucf.edu',
-            controller: email,
-            keyboardType: TextInputType.emailAddress,
-            errorText: err,
-          ),
+        NpTextField(
+          label: 'UCF Email',
+          hint: 'knight@ucf.edu',
+          controller: email,
+          keyboardType: TextInputType.emailAddress,
+          errorText: emailError,
         ),
       ],
     );
@@ -307,18 +337,18 @@ class _Step1 extends StatelessWidget {
 class _Step2 extends StatelessWidget {
   final TextEditingController password;
   final TextEditingController confirmPassword;
-  final ValueNotifier<String?> passwordError;
-  final ValueNotifier<String?> passwordSuccess;
+  final String? passwordError;
 
   const _Step2({
     required this.password,
     required this.confirmPassword,
     required this.passwordError,
-    required this.passwordSuccess,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasMatch = confirmPassword.text.isNotEmpty && passwordError == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -329,19 +359,13 @@ class _Step2 extends StatelessWidget {
           obscureText: true,
         ),
         const SizedBox(height: 18),
-        ValueListenableBuilder<String?>(
-          valueListenable: passwordError,
-          builder: (_, err, __) => ValueListenableBuilder<String?>(
-            valueListenable: passwordSuccess,
-            builder: (_, success, __) => NpTextField(
-              label: 'Confirm Password',
-              hint: 'Re-enter your password',
-              controller: confirmPassword,
-              obscureText: true,
-              errorText: err,
-              successText: success,
-            ),
-          ),
+        NpTextField(
+          label: 'Confirm Password',
+          hint: 'Re-enter your password',
+          controller: confirmPassword,
+          obscureText: true,
+          errorText: passwordError,
+          successText: hasMatch ? 'Passwords match.' : null,
         ),
       ],
     );
@@ -352,7 +376,10 @@ class _Step3 extends StatelessWidget {
   final TextEditingController ucfId;
   final ValueNotifier<String?> majorNotifier;
 
-  const _Step3({required this.ucfId, required this.majorNotifier});
+  const _Step3({
+    required this.ucfId,
+    required this.majorNotifier,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +400,7 @@ class _Step3 extends StatelessWidget {
             label: 'Major',
             value: major,
             items: ucfMajors,
-            onChanged: (v) => majorNotifier.value = v,
+            onChanged: (value) => majorNotifier.value = value,
           ),
         ),
       ],
@@ -384,66 +411,27 @@ class _Step3 extends StatelessWidget {
 class _StepButton extends StatelessWidget {
   final int step;
   final bool isLoading;
-  final TextEditingController firstName;
-  final TextEditingController lastName;
-  final TextEditingController email;
-  final TextEditingController password;
-  final TextEditingController confirmPassword;
-  final TextEditingController ucfId;
-  final ValueNotifier<String?> majorNotifier;
+  final SignUpFormData form;
+  final SignUpController controller;
   final VoidCallback onPressed;
 
   const _StepButton({
     required this.step,
     required this.isLoading,
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    required this.password,
-    required this.confirmPassword,
-    required this.ucfId,
-    required this.majorNotifier,
+    required this.form,
+    required this.controller,
     required this.onPressed,
   });
 
-  bool _canProceed() {
-    switch (step) {
-      case 0:
-        return firstName.text.trim().isNotEmpty &&
-            lastName.text.trim().isNotEmpty &&
-            email.text.trim().isNotEmpty;
-      case 1:
-        return password.text.length >= 6 &&
-            password.text == confirmPassword.text;
-      case 2:
-        return ucfId.text.trim().isNotEmpty && majorNotifier.value != null;
-      default:
-        return false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final listenables = <Listenable>[majorNotifier];
-    if (step == 0) {
-      listenables.addAll([firstName, lastName, email]);
-    } else if (step == 1) {
-      listenables.addAll([password, confirmPassword]);
-    } else if (step == 2) {
-      listenables.add(ucfId);
-    }
+    final enabled = controller.canContinue(step: step, form: form);
 
-    return ListenableBuilder(
-      listenable: Listenable.merge(listenables),
-      builder: (_, __) {
-        final enabled = _canProceed();
-        return NpButton(
-          label: step == 2 ? 'Create Account' : 'Continue',
-          variant: NpButtonVariant.primary,
-          loading: isLoading,
-          onPressed: enabled ? onPressed : null,
-        );
-      },
+    return NpButton(
+      label: step == 2 ? 'Create Account' : 'Continue',
+      variant: NpButtonVariant.primary,
+      loading: isLoading,
+      onPressed: enabled ? onPressed : null,
     );
   }
 }

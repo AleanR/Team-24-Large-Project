@@ -2,169 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../data/auth_api_service.dart';
+import '../../data/auth_repository.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/sign_in_controller.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/auth_shell.dart';
 import '../../../../shared/widgets/np_button.dart';
 import '../../../../shared/widgets/np_text_field.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  final AuthRepository authRepository;
+  final AuthController authController;
+
+  const SignInScreen({
+    super.key,
+    required this.authRepository,
+    required this.authController,
+  });
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  late final SignInController _controller;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _resetEmailController = TextEditingController();
-  final _errorMessage = ValueNotifier<String?>('');
-  final _authService = AuthApiService();
 
-  bool _isLoading = false;
   bool _isResetMode = false;
-  bool _resetSent = false;
-  String? _resetMessage;
-  String? _resetError;
 
   @override
   void initState() {
     super.initState();
+    _controller = SignInController(
+      authRepository: widget.authRepository,
+      authController: widget.authController,
+    )..addListener(_handleControllerChanged);
+
     _emailController.addListener(_refresh);
     _passwordController.addListener(_refresh);
     _resetEmailController.addListener(_refresh);
   }
 
-  void _refresh() {
-    if (mounted) setState(() {});
-  }
-
-  bool get _isComplete {
-    if (_isResetMode) {
-      return _resetEmailController.text.trim().isNotEmpty;
-    }
-    return _emailController.text.trim().isNotEmpty &&
-        _passwordController.text.isNotEmpty;
-  }
-
   @override
   void dispose() {
-    _emailController.removeListener(_refresh);
-    _passwordController.removeListener(_refresh);
-    _resetEmailController.removeListener(_refresh);
-    _emailController.dispose();
-    _passwordController.dispose();
-    _resetEmailController.dispose();
-    _errorMessage.dispose();
+    _controller
+      ..removeListener(_handleControllerChanged)
+      ..dispose();
+    _emailController
+      ..removeListener(_refresh)
+      ..dispose();
+    _passwordController
+      ..removeListener(_refresh)
+      ..dispose();
+    _resetEmailController
+      ..removeListener(_refresh)
+      ..dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    if (email.isEmpty || !email.contains('@') || password.isEmpty) {
-      _errorMessage.value =
-          'Invalid email address or password. Please try again.';
-      return;
-    }
-
-    _errorMessage.value = null;
-    setState(() => _isLoading = true);
-
-    try {
-      final response =
-          await _authService.login(email: email, password: password);
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      final username =
-          (response['firstname'] as String?)?.trim() ?? email.split('@').first;
-
-      Navigator.pushReplacementNamed(
-        context,
-        '/welcome',
-        arguments: username,
-      );
-    } on AuthException catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _errorMessage.value =
-          'Invalid email address or password. Please try again.';
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _errorMessage.value = 'Unable to sign in right now. Please try again.';
+  void _refresh() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  Future<void> _sendResetEmail() async {
-    final email = _resetEmailController.text.trim();
-
-    if (email.isEmpty || !email.contains('@')) {
-      setState(() {
-        _resetError = 'Please enter a valid email address.';
-        _resetMessage = null;
-      });
+  void _handleControllerChanged() {
+    if (!mounted) {
       return;
     }
 
-    setState(() {
-      _resetError = null;
-      _resetMessage = null;
-      _isLoading = true;
-    });
-
-    try {
-      await _authService.forgotPassword(email: email);
-      if (!mounted) return;
-      setState(() {
-        _resetSent = true;
-        _resetMessage = 'If an account exists, we sent a code to your email.';
-      });
-    } on AuthException catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _resetSent = true;
-        _resetMessage = 'If an account exists, we sent a code to your email.';
-      });
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _resetError = 'Unable to send reset instructions. Please try again.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    final state = _controller.state;
+    if (state.isAuthenticated) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/welcome',
+        arguments: state.user?.displayName ?? 'Knight',
+      );
+    } else {
+      setState(() {});
     }
   }
 
   void _showForgotPassword() {
     setState(() {
       _isResetMode = true;
-      _resetSent = false;
-      _resetMessage = null;
-      _resetError = null;
       _resetEmailController.text = _emailController.text.trim();
-      _errorMessage.value = null;
+      _controller.clearFeedback();
     });
   }
 
   void _backToSignIn() {
     setState(() {
       _isResetMode = false;
-      _resetSent = false;
-      _resetMessage = null;
-      _resetError = null;
+      _controller.clearFeedback();
     });
   }
 
-  void _goToSignUp() {
-    Navigator.pushReplacementNamed(context, '/signup');
+  Future<void> _submitSignIn() async {
+    await _controller.signIn(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+  }
+
+  Future<void> _submitReset() async {
+    await _controller.sendPasswordReset(
+      email: _resetEmailController.text,
+    );
   }
 
   @override
@@ -216,22 +162,17 @@ class _SignInScreenState extends State<SignInScreen> {
                     : _buildSignInCard(),
               ),
               const SizedBox(height: 16),
-              ValueListenableBuilder<String?>(
-                valueListenable: _errorMessage,
-                builder: (context, error, child) {
-                  if (error == null || error.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return AuthMessage(text: error, isError: true);
-                },
-              ),
-              if (!_isResetMode || !_resetSent) const SizedBox(height: 18),
+              if (_controller.errorMessage != null &&
+                  !_controller.resetSent &&
+                  !_isResetMode)
+                AuthMessage(text: _controller.errorMessage!, isError: true),
+              if (!_isResetMode || !_controller.resetSent) const SizedBox(height: 18),
               if (_isResetMode) _buildResetActions() else _buildSignInActions(),
               const SizedBox(height: 18),
               AuthFooterLink(
                 prompt: "Don't have an account?",
                 action: 'Create one',
-                onTap: _goToSignUp,
+                onTap: () => Navigator.pushReplacementNamed(context, '/signup'),
               ),
             ],
           ),
@@ -246,7 +187,7 @@ class _SignInScreenState extends State<SignInScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionTitle(
+          const _SectionTitle(
             title: 'Your account',
             caption: 'Use your UCF email and password to continue.',
           ),
@@ -291,14 +232,14 @@ class _SignInScreenState extends State<SignInScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionTitle(
-            title: _resetSent ? 'Check your inbox' : 'Reset access',
-            caption: _resetSent
+            title: _controller.resetSent ? 'Check your inbox' : 'Reset access',
+            caption: _controller.resetSent
                 ? 'Your next step is waiting in email.'
                 : 'We will email a secure code to help you get back in.',
           ),
           const SizedBox(height: 22),
-          if (_resetSent)
-            AuthMessage(text: _resetMessage ?? '')
+          if (_controller.resetSent)
+            AuthMessage(text: _controller.resetMessage ?? '')
           else ...[
             NpTextField(
               label: 'UCF Email',
@@ -306,9 +247,9 @@ class _SignInScreenState extends State<SignInScreen> {
               controller: _resetEmailController,
               keyboardType: TextInputType.emailAddress,
             ),
-            if (_resetError != null) ...[
+            if (_controller.errorMessage != null) ...[
               const SizedBox(height: 14),
-              AuthMessage(text: _resetError!, isError: true),
+              AuthMessage(text: _controller.errorMessage!, isError: true),
             ],
           ],
         ],
@@ -320,13 +261,18 @@ class _SignInScreenState extends State<SignInScreen> {
     return NpButton(
       label: 'Sign In',
       variant: NpButtonVariant.primary,
-      loading: _isLoading,
-      onPressed: (_isLoading || !_isComplete) ? null : _submit,
+      loading: _controller.isLoading,
+      onPressed: _controller.canSubmit(
+        email: _emailController.text,
+        password: _passwordController.text,
+      )
+          ? _submitSignIn
+          : null,
     );
   }
 
   Widget _buildResetActions() {
-    if (_resetSent) {
+    if (_controller.resetSent) {
       return NpButton(
         label: 'Back to Sign In',
         variant: NpButtonVariant.secondary,
@@ -339,8 +285,10 @@ class _SignInScreenState extends State<SignInScreen> {
         NpButton(
           label: 'Send Reset Code',
           variant: NpButtonVariant.primary,
-          loading: _isLoading,
-          onPressed: (_isLoading || !_isComplete) ? null : _sendResetEmail,
+          loading: _controller.isLoading,
+          onPressed: _controller.canSendReset(_resetEmailController.text)
+              ? _submitReset
+              : null,
         ),
         const SizedBox(height: 12),
         NpButton(

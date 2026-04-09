@@ -58,7 +58,7 @@ export default function RedeemPointsPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/auth/me', { credentials: 'include' })
+    fetch('/api/users/me', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => setBalance(data.pointBalance ?? 0))
       .catch(() => {})

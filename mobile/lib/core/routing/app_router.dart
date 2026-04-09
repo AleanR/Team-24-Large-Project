@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../modules/auth/data/auth_repository.dart';
+import '../../modules/auth/presentation/controllers/auth_controller.dart';
 import '../../modules/auth/presentation/screens/landing_screen.dart';
 import '../../modules/auth/presentation/screens/signin_screen.dart';
 import '../../modules/auth/presentation/screens/signup_screen.dart';
@@ -8,20 +10,38 @@ import '../../modules/events/presentation/screens/event_detail_screen.dart';
 import '../../modules/events/presentation/screens/events_screen.dart';
 
 class AppRouter {
-  static Route<dynamic> generateRoute(RouteSettings settings) {
+  final AuthRepository authRepository;
+  final AuthController authController;
+
+  const AppRouter({
+    required this.authRepository,
+    required this.authController,
+  });
+
+  Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
         return _fade(const LandingScreen());
 
       case '/signup':
-        return _slide(const SignUpScreen());
+        return _slide(
+          SignUpScreen(
+            authRepository: authRepository,
+            authController: authController,
+          ),
+        );
 
       case '/welcome':
         final username = settings.arguments as String? ?? 'Knight';
         return _fade(WelcomeScreen(username: username));
 
       case '/signin':
-        return _slide(const SignInScreen());
+        return _slide(
+          SignInScreen(
+            authRepository: authRepository,
+            authController: authController,
+          ),
+        );
 
       case '/home':
         return _fade(const EventsScreen());
