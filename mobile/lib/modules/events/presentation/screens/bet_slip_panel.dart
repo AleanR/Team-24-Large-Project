@@ -24,13 +24,13 @@ class BettingSlipSheet extends StatefulWidget {
     required this.userBalance,
   });
 
-  static Future<void> show(
+  static Future<double?> show(
     BuildContext context, {
     required EventModel event,
     required String team,
     required double odds,
     required EventDetailController controller,
-    double userBalance = 1000, // default fallback — wire up real balance
+    double userBalance = 1000,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -111,8 +111,11 @@ class _BettingSlipSheetState extends State<BettingSlipSheet> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.pop(context);
-      _showSnack('Bet placed! Potential payout: ${_potentialPayout.toStringAsFixed(0)} KP');
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context, _stake);
+      messenger.showSnackBar(_buildSnackBar(
+        'Bet placed! Potential payout: ${_potentialPayout.toStringAsFixed(0)} KP',
+      ));
     } else {
       _showSnack(widget.controller.errorMessage ?? 'Bet failed', isError: true);
       widget.controller.reset();
@@ -120,7 +123,14 @@ class _BettingSlipSheetState extends State<BettingSlipSheet> {
   }
 
   void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(_buildSnackBar(
+      msg,
+      isError: isError,
+    ));
+  }
+
+  SnackBar _buildSnackBar(String msg, {bool isError = false}) {
+    return SnackBar(
       content: Text(msg,
           style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w600)),
       backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
@@ -128,7 +138,7 @@ class _BettingSlipSheetState extends State<BettingSlipSheet> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       duration: const Duration(seconds: 3),
-    ));
+    );
   }
 
   @override

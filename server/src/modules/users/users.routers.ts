@@ -1,10 +1,18 @@
 import { Router } from 'express';
-import { deleteUser, getAllUsers, getCurrentUser, searchUsers, updateUser } from './users.controllers';
+import {
+    deleteUser,
+    earnPoints,
+    getAllUsers,
+    getCurrentUser,
+    searchUsers,
+    updateUser,
+} from './users.controllers';
 import { isAuthenticated } from '../../middlewares';
 import { forgotPass, resetPass } from './users.password';
 
 export default (router: Router) => {
     router.get('/users/me', isAuthenticated, getCurrentUser);
+    router.post('/users/earn-points', isAuthenticated, earnPoints);
     router.get('/users', isAuthenticated, getAllUsers);
     router.delete('/users/:id', isAuthenticated, deleteUser);
     router.patch('/users/:id', isAuthenticated, updateUser);

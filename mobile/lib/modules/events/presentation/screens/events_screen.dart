@@ -1,5 +1,6 @@
 // lib/modules/events/presentation/screens/events_screen.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/theme/app_theme.dart';
@@ -17,8 +18,15 @@ import 'bet_slip_panel.dart';
 
 class EventsScreen extends StatefulWidget {
   final String authToken;
-  final double userBalance;
-  const EventsScreen({super.key, required this.authToken, required this.userBalance});
+  final ValueListenable<int> knightPointsListenable;
+  final ValueChanged<int> onKnightPointsChanged;
+
+  const EventsScreen({
+    super.key,
+    required this.authToken,
+    required this.knightPointsListenable,
+    required this.onKnightPointsChanged,
+  });
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
@@ -111,15 +119,25 @@ class _EventsScreenState extends State<EventsScreen>
     _eventsController.loadEvents();
   }
 
-void _onSideSelected(EventModel event, String team, double odds) {
-    BettingSlipSheet.show(
+  Future<void> _onSideSelected(
+    EventModel event,
+    String team,
+    double odds,
+  ) async {
+    final stake = await BettingSlipSheet.show(
       context,
       event: event,
       team: team,
       odds: odds,
       controller: _detailController,
-      userBalance: widget.userBalance,
+      userBalance: widget.knightPointsListenable.value.toDouble(),
     );
+
+    if (!mounted || stake == null) return;
+
+    final nextBalance = widget.knightPointsListenable.value - stake.round();
+    widget.onKnightPointsChanged(nextBalance);
+    _detailController.reset();
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────

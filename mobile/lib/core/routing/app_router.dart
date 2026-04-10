@@ -7,7 +7,6 @@ import '../../modules/auth/presentation/screens/signup_screen.dart';
 import '../../modules/auth/presentation/screens/welcome_screen.dart';
 import '../../modules/events/domain/event.dart';
 import '../../modules/events/presentation/screens/event_detail_screen.dart';
-import '../../modules/events/presentation/screens/events_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 class AppRouter {
@@ -46,8 +45,15 @@ class AppRouter {
 
       case '/home':
         final token = authController.state.token ?? '';
-        final balance = authController.state.user?.pointBalance?.toDouble() ?? 1000.0;
-        return _fade(MainShell(authToken: token, userBalance: balance)); 
+        final user = authController.state.user;
+        final knightPoints = user?.knightPoints ?? 1000;
+        return _fade(MainShell(
+          authToken: token,
+          initialUser: user,
+          initialKnightPoints: knightPoints,
+          onKnightPointsChanged: authController.updateKnightPoints,
+          onSignOut: authController.markUnauthenticated,
+        ));
 
       case '/event-detail':
         // EventDetailScreen reads event from route arguments via ModalRoute
