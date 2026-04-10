@@ -16,14 +16,14 @@ import '../widgets/filter_tab_bar.dart';
 import 'bet_slip_panel.dart';
 
 class EventsScreen extends StatefulWidget {
-  /// Pass the user's JWT token so services can authenticate.
   final String authToken;
-
-  const EventsScreen({super.key, required this.authToken});
+  final double userBalance;
+  const EventsScreen({super.key, required this.authToken, required this.userBalance});
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
 }
+
 
 class _EventsScreenState extends State<EventsScreen>
     with SingleTickerProviderStateMixin {
@@ -111,13 +111,14 @@ class _EventsScreenState extends State<EventsScreen>
     _eventsController.loadEvents();
   }
 
-  void _onSideSelected(EventModel event, String team, double odds) {
+void _onSideSelected(EventModel event, String team, double odds) {
     BettingSlipSheet.show(
       context,
       event: event,
       team: team,
       odds: odds,
       controller: _detailController,
+      userBalance: widget.userBalance,
     );
   }
 

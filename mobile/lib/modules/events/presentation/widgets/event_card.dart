@@ -4,17 +4,24 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/theme/app_theme.dart';
 import '../../domain/event.dart';
 
 class EventCard extends StatefulWidget {
   final EventModel event;
   final void Function(String team, double odds) onSideSelected;
 
+  /// 'home' or 'away' if the user already placed a bet on this event.
+  final String? userPickedTeam;
+
+  /// true = won, false = lost, null = no bet placed yet.
+  final bool? userWon;
+
   const EventCard({
     super.key,
     required this.event,
     required this.onSideSelected,
+    this.userPickedTeam,
+    this.userWon,
   });
 
   @override
@@ -33,6 +40,9 @@ class _EventCardState extends State<EventCard> {
   bool get _isBettable =>
       widget.event.computedStatus == EventStatus.upcoming ||
       widget.event.computedStatus == EventStatus.live;
+
+  bool get _hasResult =>
+      _isTerminal && widget.userPickedTeam != null && widget.userWon != null;
 
   @override
   void initState() {
@@ -61,33 +71,47 @@ class _EventCardState extends State<EventCard> {
     setState(() => _selectedSide = _selectedSide == side ? -1 : side);
     if (_selectedSide != -1) {
       final team = side == 0 ? 'home' : 'away';
-      final odds = side == 0
-          ? widget.event.homeWin.odds
-          : widget.event.awayWin.odds;
+      final odds =
+          side == 0 ? widget.event.homeWin.odds : widget.event.awayWin.odds;
       widget.onSideSelected(team, odds);
     }
   }
 
-  // Status color
-  Color get _statusColor {
+  Color get _borderColor {
+    if (_hasResult) {
+      return widget.userWon! ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+    }
     switch (widget.event.computedStatus) {
-      case EventStatus.live:
-        return const Color(0xFF4ADE80);
       case EventStatus.upcoming:
-        return const Color(0xFFFBBF24);
+        return const Color(0xFF3B82F6); // blue — coming soon
+      case EventStatus.live:
+        final r = _remaining;
+        if (r != null && r.inMinutes < 60) {
+          return const Color(0xFFF97316); // orange — closing soon
+        }
+        return const Color(0xFFFBBF24); // gold — open
       case EventStatus.finished:
-        return const Color(0xFF94A3B8);
+        return const Color(0xFF4B5563); // grey — closed
       case EventStatus.cancelled:
         return const Color(0xFFEF4444);
     }
   }
 
+  Color get _cardBg {
+    if (_hasResult && widget.userWon == true) return const Color(0xFF0A1F12);
+    if (_hasResult && widget.userWon == false) return const Color(0xFF1F0A0A);
+    return const Color(0xFF111318);
+  }
+
   String get _statusLabel {
+    if (_hasResult) return widget.userWon! ? 'Won' : 'Lost';
     switch (widget.event.computedStatus) {
       case EventStatus.upcoming:
-        return 'Open';
+        return 'Soon';
       case EventStatus.live:
-        return 'Live';
+        final r = _remaining;
+        if (r != null && r.inMinutes < 60) return 'Closing';
+        return 'Open';
       case EventStatus.finished:
         return 'Closed';
       case EventStatus.cancelled:
@@ -100,14 +124,13 @@ class _EventCardState extends State<EventCard> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final eventDay = DateTime(d.year, d.month, d.day);
-    final months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    final weekday = days[d.weekday - 1];
+    const months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const wdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
-    final m = d.minute.toString().padLeft(2, '0');
+    final mi = d.minute.toString().padLeft(2, '0');
     final ampm = d.hour < 12 ? 'AM' : 'PM';
-    if (eventDay == today) return 'Today · $h:$m $ampm';
-    return '$weekday ${months[d.month]} ${d.day}, $h:$m $ampm';
+    if (eventDay == today) return 'Today · $h:$mi $ampm';
+    return '${wdays[d.weekday - 1]} ${months[d.month]} ${d.day}, $h:$mi $ampm';
   }
 
   String get _countdownLabel {
@@ -115,42 +138,35 @@ class _EventCardState extends State<EventCard> {
     if (r == null) return '';
     final h = r.inHours;
     final m = r.inMinutes.remainder(60);
-    final s = r.inSeconds.remainder(60).toString().padLeft(2, '0');
     if (h > 0) return 'Closes in ${h}h ${m}m';
-    return 'Closes in $m:$s';
+    return 'Closes in ${m}m ${r.inSeconds.remainder(60)}s';
   }
 
-  // Guess sport from team names / context — you can improve this
   String get _sportLabel {
-    final home = widget.event.homeTeam.toLowerCase();
-    final away = widget.event.awayTeam.toLowerCase();
-    if (home.contains('baseball') || away.contains('baseball')) return 'Baseball';
-    if (home.contains('softball') || away.contains('softball')) return 'Softball';
-    if (home.contains('tennis') || away.contains('tennis')) return 'Tennis';
-    if (home.contains('basketball') || away.contains('basketball')) return 'Basketball';
+    final s = '${widget.event.homeTeam} ${widget.event.awayTeam}'.toLowerCase();
+    if (s.contains('softball')) return 'Softball';
+    if (s.contains('baseball')) return 'Baseball';
+    if (s.contains('tennis')) return 'Tennis';
+    if (s.contains('basketball')) return 'Basketball';
     return 'Sports';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isOpen = widget.event.computedStatus == EventStatus.upcoming;
-    final isLive = widget.event.computedStatus == EventStatus.live;
-
+    final accent = _borderColor;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF111318),
+        color: _cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: const Color(0xFFFBBF24), width: 3),
-        ),
+        border: Border(left: BorderSide(color: accent, width: 3)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top row: sport + date + status badge ──
+            // Top row
             Row(
               children: [
                 Text(
@@ -162,79 +178,24 @@ class _EventCardState extends State<EventCard> {
                   ),
                 ),
                 const Spacer(),
-                // Status badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _statusColor,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isLive) ...[
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: _statusColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        _statusLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _statusColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _StatusBadge(label: _statusLabel, color: accent),
               ],
             ),
-
             const SizedBox(height: 10),
 
-            // ── Team names stacked ──
-            Text(
-              widget.event.homeTeam,
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: -0.4,
-              ),
-            ),
-            Text(
-              'vs',
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
-                height: 1.4,
-              ),
-            ),
-            Text(
-              widget.event.awayTeam,
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: -0.4,
-              ),
-            ),
-
+            // Team names stacked
+            Text(widget.event.homeTeam,
+                style: GoogleFonts.dmSans(
+                    fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.4)),
+            Text('vs',
+                style: GoogleFonts.dmSans(
+                    fontSize: 13, color: const Color(0xFF6B7280), height: 1.4)),
+            Text(widget.event.awayTeam,
+                style: GoogleFonts.dmSans(
+                    fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.4)),
             const SizedBox(height: 12),
 
-            // ── Odds chips ──
+            // Odds chips
             Row(
               children: [
                 Expanded(
@@ -243,6 +204,8 @@ class _EventCardState extends State<EventCard> {
                     oddsLabel: widget.event.homeWin.displayOdds,
                     isSelected: _selectedSide == 0,
                     isDisabled: _isTerminal || !_isBettable,
+                    isUserPick: widget.userPickedTeam == 'home',
+                    userWon: _hasResult ? widget.userWon : null,
                     onTap: () => _selectSide(0),
                   ),
                 ),
@@ -253,35 +216,25 @@ class _EventCardState extends State<EventCard> {
                     oddsLabel: widget.event.awayWin.displayOdds,
                     isSelected: _selectedSide == 1,
                     isDisabled: _isTerminal || !_isBettable,
+                    isUserPick: widget.userPickedTeam == 'away',
+                    userWon: _hasResult ? widget.userWon : null,
                     onTap: () => _selectSide(1),
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
 
-            // ── Footer: countdown + bets placed ──
+            // Footer
             Row(
               children: [
-                if (_remaining != null)
-                  Text(
-                    _countdownLabel,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
+                if (_remaining != null && !_isTerminal)
+                  Text(_countdownLabel,
+                      style: GoogleFonts.dmSans(
+                          fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF6B7280))),
                 const Spacer(),
-                Text(
-                  '${widget.event.totalBettors} bets placed',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
+                Text('${widget.event.totalBettors} bets placed',
+                    style: GoogleFonts.dmSans(fontSize: 11, color: const Color(0xFF6B7280))),
               ],
             ),
           ],
@@ -291,11 +244,32 @@ class _EventCardState extends State<EventCard> {
   }
 }
 
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Text(label,
+          style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+    );
+  }
+}
+
 class _OddsChip extends StatelessWidget {
   final String teamName;
   final String oddsLabel;
   final bool isSelected;
   final bool isDisabled;
+  final bool isUserPick;
+  final bool? userWon; // null = no result yet
   final VoidCallback onTap;
 
   const _OddsChip({
@@ -303,18 +277,35 @@ class _OddsChip extends StatelessWidget {
     required this.oddsLabel,
     required this.isSelected,
     required this.isDisabled,
+    required this.isUserPick,
+    required this.userWon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFFBBF24);
-    final bg = isSelected
-        ? gold.withValues(alpha: 0.12)
-        : const Color(0xFF1C1F26);
-    final border = isSelected
-        ? gold.withValues(alpha: 0.7)
-        : const Color(0xFF2A2D35);
+    const green = Color(0xFF22C55E);
+    const red = Color(0xFFEF4444);
+
+    late Color borderColor;
+    late Color textColor;
+    late Color bg;
+    String? subLabel;
+
+    if (isUserPick && userWon == true) {
+      borderColor = green; textColor = green;
+      bg = green.withValues(alpha: 0.1); subLabel = 'Winner';
+    } else if (isUserPick && userWon == false) {
+      borderColor = red; textColor = red;
+      bg = red.withValues(alpha: 0.08); subLabel = 'Your pick';
+    } else if (isSelected) {
+      borderColor = gold.withValues(alpha: 0.7); textColor = gold;
+      bg = gold.withValues(alpha: 0.12);
+    } else {
+      borderColor = const Color(0xFF2A2D35); textColor = Colors.white;
+      bg = const Color(0xFF1C1F26);
+    }
 
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
@@ -324,31 +315,24 @@ class _OddsChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: border, width: 1.2),
+          border: Border.all(color: borderColor, width: 1.2),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              teamName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF9CA3AF),
-              ),
-            ),
+            Text(teamName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF9CA3AF))),
             const SizedBox(height: 2),
-            Text(
-              oddsLabel,
-              style: GoogleFonts.dmSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: isSelected ? gold : Colors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
+            Text(oddsLabel,
+                style: GoogleFonts.dmSans(
+                    fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.5)),
+            if (subLabel != null) ...[
+              const SizedBox(height: 2),
+              Text(subLabel,
+                  style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: textColor)),
+            ],
           ],
         ),
       ),

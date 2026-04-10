@@ -45,9 +45,9 @@ class AppRouter {
         );
 
       case '/home':
-        // Token lives at authController.state.user?.token
         final token = authController.state.token ?? '';
-        return _fade(MainShell(authToken: token));
+        final balance = authController.state.user?.pointBalance?.toDouble() ?? 1000.0;
+        return _fade(MainShell(authToken: token, userBalance: balance)); 
 
       case '/event-detail':
         // EventDetailScreen reads event from route arguments via ModalRoute
