@@ -4,22 +4,35 @@
 // Usage in app_router.dart:
 //   case '/home':
 //     final token = authController.state.token ?? '';
-//     return _fade(MainShell(authToken: token));
+//     return _fade(MainShell(authToken: token, initialKnightPoints: 1000));
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../modules/account/presentation/screens/account_screen.dart';
+import '../../modules/auth/domain/user.dart';
 import '../../modules/events/presentation/screens/events_screen.dart';
 // TODO: swap these placeholders for your real screens when ready
 // import '../../modules/bets/presentation/screens/bets_screen.dart';
 // import '../../modules/rewards/presentation/screens/rewards_screen.dart';
-// import '../../modules/account/presentation/screens/account_screen.dart';
 
 class MainShell extends StatefulWidget {
   final String authToken;
-  final double userBalance;
-  const MainShell({super.key, required this.authToken, required this.userBalance});
+  final User? initialUser;
+  final int initialKnightPoints;
+  final ValueChanged<int>? onKnightPointsChanged;
+  final VoidCallback? onSignOut;
+
+  const MainShell({
+    super.key,
+    required this.authToken,
+    this.initialUser,
+    required this.initialKnightPoints,
+    this.onKnightPointsChanged,
+    this.onSignOut,
+  });
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -27,6 +40,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  late final ValueNotifier<int> _knightPoints;
 
   // Keep pages alive when switching tabs
   late final List<Widget> _pages;
@@ -34,12 +48,36 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    _knightPoints = ValueNotifier<int>(widget.initialKnightPoints);
     _pages = [
-      EventsScreen(authToken: widget.authToken, userBalance: widget.userBalance),
+      EventsScreen(
+        authToken: widget.authToken,
+        knightPointsListenable: _knightPoints,
+        onKnightPointsChanged: _setKnightPoints,
+      ),
       _PlaceholderPage(label: 'Bets', icon: Icons.attach_money_rounded),
       _PlaceholderPage(label: 'Rewards', icon: Icons.card_giftcard_rounded),
-      _PlaceholderPage(label: 'Account', icon: Icons.person_outline_rounded),
+      AccountScreen(
+        authToken: widget.authToken,
+        initialUser: widget.initialUser,
+        knightPointsListenable: _knightPoints,
+        onKnightPointsChanged: _setKnightPoints,
+        onSignOut: widget.onSignOut,
+      ),
     ];
+  }
+
+  @override
+  void dispose() {
+    _knightPoints.dispose();
+    super.dispose();
+  }
+
+  void _setKnightPoints(int value) {
+    final next = value < 0 ? 0 : value;
+    if (_knightPoints.value == next) return;
+    _knightPoints.value = next;
+    widget.onKnightPointsChanged?.call(next);
   }
 
   void _onTap(int index) {

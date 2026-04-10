@@ -22,6 +22,7 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final points = json['knightPoints'] ?? json['pointBalance'];
     return User(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
@@ -30,12 +31,13 @@ class User {
       username: (json['username'] ?? '').toString(),
       major: json['major']?.toString(),
       ucfId: json['ucfID']?.toString(),
-      pointBalance: json['pointBalance'] is int
-          ? json['pointBalance'] as int
-          : int.tryParse('${json['pointBalance'] ?? ''}'),
+      pointBalance:
+          points is num ? points.toInt() : int.tryParse('${points ?? ''}'),
       isVerified: json['isVerified'] == true,
     );
   }
+
+  int get knightPoints => pointBalance ?? 0;
 
   String get displayName {
     if (firstName.trim().isNotEmpty) {
@@ -45,5 +47,29 @@ class User {
       return username.trim();
     }
     return email.split('@').first;
+  }
+
+  User copyWith({
+    String? id,
+    String? email,
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? major,
+    String? ucfId,
+    int? pointBalance,
+    bool? isVerified,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      username: username ?? this.username,
+      major: major ?? this.major,
+      ucfId: ucfId ?? this.ucfId,
+      pointBalance: pointBalance ?? this.pointBalance,
+      isVerified: isVerified ?? this.isVerified,
+    );
   }
 }

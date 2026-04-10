@@ -25,6 +25,15 @@ class AuthController extends ChangeNotifier {
     ));
   }
 
+  void updateKnightPoints(int knightPoints) {
+    final user = _state.user;
+    if (user == null) return;
+
+    _emit(_state.copyWith(
+      user: user.copyWith(pointBalance: knightPoints),
+    ));
+  }
+
   void setVerificationPending({
     required String email,
     required String message,
