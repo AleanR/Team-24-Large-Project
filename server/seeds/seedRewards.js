@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const RewardSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -320,8 +321,8 @@ const rewards = [
 
 async function seed() {
     try {
-        const uri = process.env.MONGO_DB_URL || process.env.MONGO_DB_URI;
-        if (!uri) throw new Error('MONGO_DB_URL is not set in .env');
+        const uri = process.env.MONGO_DB_URL || process.env.MONGO_DB_URI || process.env.MONGODB_URI;
+        if (!uri) throw new Error('No MongoDB URI found in .env');
 
         await mongoose.connect(uri);
         console.log('Connected to MongoDB');
