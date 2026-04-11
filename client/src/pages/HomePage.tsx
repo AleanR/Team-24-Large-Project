@@ -34,7 +34,7 @@ function HomePage() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch('/api/games')
       .then((r) => r.json())
       .then((data) => setEvents(Array.isArray(data) ? data : []))
       .catch(() => {})

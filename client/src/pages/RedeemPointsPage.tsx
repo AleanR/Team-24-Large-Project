@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import Navigation from '../components/Navigation'
+import { useParams } from 'react-router-dom'
 
 interface Perk {
-  id: string
+  rewardId: string
   name: string
   description: string
   cost: number
@@ -11,28 +12,28 @@ interface Perk {
 
 const perks: Perk[] = [
   {
-    id: 'ucf-dining',
+    rewardId: 'ucf-dining',
     name: 'UCF Dining $5 Credit',
     description: 'Redeem at any on-campus dining location.',
     cost: 5000,
     icon: '🍔',
   },
   {
-    id: 'ucf-hoodie',
+    rewardId: 'ucf-hoodie',
     name: 'UCF Hoodie',
     description: 'Official UCF Knights pullover hoodie. Pick up at the campus bookstore.',
     cost: 8000,
     icon: '👕',
   },
   {
-    id: 'bookstore-voucher',
+    rewardId: 'bookstore-voucher',
     name: 'Campus Bookstore Voucher',
     description: '$10 off your next purchase at the UCF Bookstore.',
     cost: 10000,
     icon: '📚',
   },
   {
-    id: 'knights-ticket',
+    rewardId: 'knights-ticket',
     name: 'Knights Game Ticket',
     description: 'One ticket to a UCF Knights home basketball game.',
     cost: 20000,
@@ -57,8 +58,9 @@ export default function RedeemPointsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetch('/api/users/me', { credentials: 'include' })
+  const { id } = useParams<{ id: string }>()
+
+  useEffect(() => { fetch('/api/users/me', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => setBalance(data.pointBalance ?? 0))
       .catch(() => {})
@@ -69,11 +71,11 @@ export default function RedeemPointsPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/redeem-perk', {
+      const res = await fetch(`/api/users/${id}/redeem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ perkId: confirmModal.perk.id }),
+        body: JSON.stringify({ rewardId: confirmModal.perk.rewardId }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -123,7 +125,7 @@ export default function RedeemPointsPage() {
             const affordable = canAfford(perk.cost)
             return (
               <div
-                key={perk.id}
+                key={perk.rewardId}
                 className={`rounded-2xl border bg-[#14161d] p-5 transition ${
                   affordable
                     ? 'border-zinc-700 hover:border-yellow-400/40'

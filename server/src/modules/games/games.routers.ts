@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllGames, addGame, updateGame, cancelGame, deleteGame, searchGames, endGame, getPublicGames } from './games.controllers';
+import { getAllGames, addGame, updateGame, cancelGame, deleteGame, searchGames, getPublicGames, endGame } from './games.controllers';
 import { isAdmin, isAuthenticated } from '../../middlewares';
 
 export default (router: Router) => {

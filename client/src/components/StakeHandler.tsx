@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 
 interface Bet {
   id: string
-  eventId: string
+  gameId: string
   matchup: string
   marketType: string
   selection: string
-  odds: string
+  odds: number
 }
 
 interface StakeHandlerProps {

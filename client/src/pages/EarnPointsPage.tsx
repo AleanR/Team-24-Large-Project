@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Navigation from '../components/Navigation'
+import { useParams } from 'react-router-dom'
 
 export default function EarnPointsPage() {
   const [code, setCode] = useState('')
@@ -7,6 +8,7 @@ export default function EarnPointsPage() {
   const [message, setMessage] = useState('')
   const [newBalance, setNewBalance] = useState<number | null>(null)
 
+  const { id } = useParams<{ id: string }>()
   const isValidCode = /^\d{16}$/.test(code)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,7 +19,7 @@ export default function EarnPointsPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/api/earn-points', {
+      const res = await fetch(`/api/users/${id}/earn-points`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -28,7 +30,7 @@ export default function EarnPointsPage() {
       if (res.ok) {
         setStatus('success')
         setMessage(data.message)
-        setNewBalance(data.pointBalance)
+        setNewBalance(data.knightPoints)
         setCode('')
       } else {
         setStatus('error')

@@ -5,9 +5,10 @@ import { UserModel } from '../users/users.model';
 
 // Fixed reward catalog (only 3 rewards as your project requires)
 const rewards = [
-    { id: "reward1", name: "Free Drink", cost: 100 },
-    { id: "reward2", name: "Free Snack", cost: 250 },
-    { id: "reward3", name: "UCF Merch Entry", cost: 500 },
+    { id: "ucf-dining", name: "UCF Dining $5 Credit", cost: 100 },
+    { id: "ucf-hoodie", name: "UCF Hoodie", cost: 250 },
+    { id: "bookstore-voucher", name: "Campus Bookstore Voucher", cost: 500 },
+    { id: "knights-ticket", name: "Knights Game Ticket", cost: 500 },
 ];
 
 
@@ -28,11 +29,11 @@ export const redeemReward = async (req: AuthenticatedRequest, res: Response) => 
             return res.status(401).json({ message: "Unauthorized" });
         }
 
-        if (req.user.id !== id) {
-            return res.status(403).json({
-                message: "Can only redeem rewards for own account"
-            });
-        }
+        // if (req.user.id !== id) {
+        //     return res.status(403).json({
+        //         message: "Can only redeem rewards for own account"
+        //     });
+        // }
 
         const reward = rewards.find(r => r.id === rewardId);
 

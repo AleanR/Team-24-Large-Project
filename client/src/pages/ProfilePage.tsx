@@ -49,7 +49,7 @@ function ProfilePage() {
     }`
 
   const fullName = user ? `${user.firstname} ${user.lastname}` : ''
-  const balance = user?.pointBalance ?? 0
+  const balance = user?.knightPoints
   const school = user?.major ?? 'University of Central Florida'
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })

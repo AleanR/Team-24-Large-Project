@@ -19,7 +19,7 @@ try {
         awayEmoji: { type: String, default: '🏀' },
         moneyline: {
             home: { label: String, odds: String },
-            away: { label: String, odds: String },
+            away: { label: String, odds: String }
         },
     }, { timestamps: true });
     Event = mongoose.model('Event', eventSchema);
