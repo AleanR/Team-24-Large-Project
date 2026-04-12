@@ -1,44 +1,53 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navigation from '../components/Navigation'
+import { formatDate, formatEditDate, formatTime } from '../helper/dateFormat'
 
-interface GameEvent {
+interface Form {
+  sport: string
   _id?: string
   homeTeam: string
   awayTeam: string
   date: string
   time: string
-  status: string
+  emoji: string
   homeOdds: string
   awayOdds: string
 }
 
 interface Game {
   _id: string
+  sport: string
   homeTeam: string
   awayTeam: string
   status: string
   winner: string
   scoreHome: number
   scoreAway: number
+  homeWin: { label: string, odds: number }
+  awayWin: { label: string, odds: number }
+  emoji: string
   bettingClosesAt: string
+  date: string
+  time: string
 }
 
-const EMPTY_FORM: GameEvent = {
+const EMPTY_FORM: Form = {
+  sport: '',
   homeTeam: '',
   awayTeam: '',
   date: '',
   time: '',
-  status: 'Open',
+  emoji: 'Basketball 🏀',
   homeOdds: '1.90',
   awayOdds: '1.90',
 }
 
 function AdminPage() {
   const navigate = useNavigate()
-  const [events, setEvents] = useState<any[]>([])
+  const [events, setEvents] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState<GameEvent>(EMPTY_FORM)
+  const [form, setForm] = useState<Form>(EMPTY_FORM)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +77,7 @@ function AdminPage() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch('/api/admin/events', { credentials: 'include' })
+      const res = await fetch('/api/games', { credentials: 'include' })
       if (res.ok) setEvents(await res.json())
     } catch {
       setError('Failed to load events')
@@ -116,21 +125,21 @@ function AdminPage() {
     }
   }
 
-  const handleChange = (field: keyof GameEvent, value: string) => {
+  const handleChange = (field: keyof Form, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  const toDateInput = (mmddyy: string) => {
-    if (!mmddyy || !mmddyy.includes('-')) return ''
-    const [mm, dd, yy] = mmddyy.split('-')
-    return `20${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
-  }
+  // const toDateInput = (mmddyy: string) => {
+  //   if (!mmddyy || !mmddyy.includes('-')) return ''
+  //   const [mm, dd, yy] = mmddyy.split('-')
+  //   return `20${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  // }
 
-  const fromDateInput = (iso: string) => {
-    if (!iso || !iso.includes('-')) return ''
-    const [y, m, d] = iso.split('-')
-    return `${m}-${d}-${y.slice(2)}`
-  }
+  // const fromDateInput = (iso: string) => {
+  //   if (!iso || !iso.includes('-')) return ''
+  //   const [y, m, d] = iso.split('-')
+  //   return `${m}-${d}-${y.slice(2)}`
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -138,14 +147,14 @@ function AdminPage() {
     setError(null)
     try {
       const url = editingId
-        ? `/api/admin/events/${editingId}`
-        : '/api/admin/events'
+        ? `/api/games/${editingId}`
+        : '/api/games'
       const method = editingId ? 'PATCH' : 'POST'
       const res = await fetch(url, {
         method,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, date: fromDateInput(form.date) }),
+        body: JSON.stringify({ ...form }),
       })
       if (!res.ok) throw new Error('Failed to save')
       setForm(EMPTY_FORM)
@@ -158,24 +167,38 @@ function AdminPage() {
     }
   }
 
-  const handleEdit = (event: any) => {
+  const handleEdit = (event: Game) => {
     setEditingId(event._id)
     setForm({
+      sport: event.sport,
       homeTeam: event.homeTeam,
       awayTeam: event.awayTeam,
-      date: toDateInput(event.date),
-      time: event.time,
-      status: event.status,
-      homeOdds: event.moneyline?.home?.odds ?? '1.90',
-      awayOdds: event.moneyline?.away?.odds ?? '1.90',
+      date: formatEditDate(event.bettingClosesAt),
+      time: formatTime(event.bettingClosesAt),
+      emoji: `${event.sport} ${event.emoji}`,
+      homeOdds: String(event.homeWin.odds) ?? '1.90',
+      awayOdds: String(event.awayWin.odds) ?? '1.90',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Cancel this event?')) return
+    try {
+      await fetch(`api/games/${id}/cancel`, {
+        method: "DELETE",
+        credentials: 'include',
+      })
+      await fetchEvents()
+    } catch {
+      setError('Failed to cancel event')
+    }
   }
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this event?')) return
     try {
-      await fetch(`/api/admin/events/${id}`, {
+      await fetch(`/api/games/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -186,7 +209,7 @@ function AdminPage() {
   }
 
   const handleStatusToggle = async (event: any) => {
-    const nextStatus = event.status === 'Open' ? 'Closed' : 'Open'
+    const nextStatus = event.status === '🏀' ? '🏈' : '⚽'
     try {
       await fetch(`/api/admin/events/${event._id}`, {
         method: 'PATCH',
@@ -255,7 +278,7 @@ function AdminPage() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="mb-1 block text-sm font-semibold text-zinc-300">Date</label>
+                <label className="mb-1 block text-sm font-semibold text-zinc-300">Start Date</label>
                 <input
                   required
                   type="date"
@@ -265,7 +288,7 @@ function AdminPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold text-zinc-300">Time</label>
+                <label className="mb-1 block text-sm font-semibold text-zinc-300">Start Time</label>
                 <input
                   required
                   value={form.time}
@@ -275,15 +298,15 @@ function AdminPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold text-zinc-300">Status</label>
+                <label className="mb-1 block text-sm font-semibold text-zinc-300">Emoji</label>
                 <select
-                  value={form.status}
-                  onChange={e => handleChange('status', e.target.value)}
+                  value={form.emoji}
+                  onChange={e => handleChange('emoji', e.target.value)}
                   className="w-full rounded-xl border border-zinc-700 bg-[#181b22] px-4 py-3 text-white outline-none focus:border-yellow-400"
                 >
-                  <option value="Open">Open</option>
-                  <option value="Closed">Closed</option>
-                  <option value="Live">Live</option>
+                  <option value="Basketball 🏀">🏀</option>
+                  <option value="Football 🏈">🏈</option>
+                  <option value="Soccer ⚽">⚽</option>
                 </select>
               </div>
             </div>
@@ -353,26 +376,24 @@ function AdminPage() {
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-xl font-bold">
-                        {event.homeEmoji} {event.homeTeam} vs {event.awayEmoji} {event.awayTeam}
+                        {event.emoji} {event.homeTeam} vs {event.emoji} {event.awayTeam}
                       </p>
-                      <p className="mt-1 text-zinc-400">{event.date} • {event.time}</p>
+                      <p className="mt-1 text-zinc-400">{formatDate(event.bettingClosesAt)} • {formatTime(event.bettingClosesAt)}</p>
                       <p className="mt-1 text-sm text-zinc-500">
-                        Home: {event.moneyline?.home?.odds ?? '—'} &nbsp;|&nbsp; Away: {event.moneyline?.away?.odds ?? '—'}
+                        Home: {event.homeWin.odds || '—'} &nbsp;|&nbsp; Away: {event.awayWin.odds || '—'}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => handleStatusToggle(event)}
+                        // onClick={() => handleStatusToggle(event)}
                         className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
-                          event.status === 'Open'
-                            ? 'border-green-500/40 bg-green-500/10 text-green-400 hover:bg-green-500/20'
-                            : event.status === 'Live'
-                            ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                            event.status === 'live'
+                            ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 animate-pulse'
                             : 'border-zinc-600 bg-zinc-700/20 text-zinc-400 hover:bg-zinc-700/40'
                         }`}
                       >
-                        {event.status}
+                        {event.status.toLocaleUpperCase()}
                       </button>
 
                       <button
@@ -380,6 +401,13 @@ function AdminPage() {
                         className="rounded-xl border border-zinc-700 bg-[#181b22] px-4 py-2 text-sm font-semibold text-white hover:border-yellow-400 transition"
                       >
                         Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleCancel(event._id)}
+                        className="rounded-xl border border-zinc-700 bg-[#181b22] px-4 py-2 text-sm font-semibold text-white hover:border-red-500 transition"
+                      >
+                        Cancel
                       </button>
 
                       <button
@@ -429,14 +457,14 @@ function AdminPage() {
                           {game.homeTeam} <span className="text-zinc-500">vs</span> {game.awayTeam}
                         </p>
                         <p className="mt-1 text-sm text-zinc-400">
-                          Closes: {new Date(game.bettingClosesAt).toLocaleString()}
+                          Closes: {formatDate(game.bettingClosesAt.toString())} • {formatTime(game.bettingClosesAt.toString())}
                         </p>
-                        <span className={`mt-1 inline-block rounded-full px-3 py-0.5 text-xs font-semibold ${
+                        <span className={`mt-1 inline-block rounded-full px-3 py-0.5 text-m font-semibold ${
                           game.status === 'live'
-                            ? 'bg-yellow-500/15 text-yellow-400'
+                            ? 'bg-yellow-500/15 text-yellow-400 animate-pulse'
                             : 'bg-zinc-700/40 text-zinc-400'
                         }`}>
-                          {game.status}
+                          {game.status.toUpperCase()}
                         </span>
                       </div>
 

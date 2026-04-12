@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { statCards, winners } from '../data/mockHomeData'
 import Navigation from '../components/Navigation'
+import { formatDate, formatTime } from '../helper/dateFormat'
 
 function HomePage() {
   const navigate = useNavigate()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [events, setEvents] = useState<any[]>([])
-  const [loadingEvents, setLoadingEvents] = useState(true)
+  const [games, setGames] = useState<any[]>([])
+  const [loadingGames, setLoadingGames] = useState(true)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -36,9 +37,9 @@ function HomePage() {
   useEffect(() => {
     fetch('/api/games')
       .then((r) => r.json())
-      .then((data) => setEvents(Array.isArray(data) ? data : []))
+      .then((data) => setGames(Array.isArray(data) ? data : []))
       .catch(() => {})
-      .finally(() => setLoadingEvents(false))
+      .finally(() => setLoadingGames(false))
   }, [])
 
   const handleGetStarted = () => {
@@ -123,7 +124,7 @@ function HomePage() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">
-              Play risk-free with virtual points to predict outcomes of UCF sporting events.
+              Play risk-free with virtual points to predict outcomes of UCF sporting games.
               Best leagues with friends, climb leaderboards, and redeem rewards for campus perks.
             </p>
 
@@ -141,7 +142,7 @@ function HomePage() {
                 onClick={() => navigate('/markets')}
                 className="rounded-xl border border-zinc-700 bg-[#111216] px-6 py-3 font-semibold text-yellow-400 hover:border-yellow-400 transition"
               >
-                Browse Events
+                Browse games
               </button>
             </div>
           </div>
@@ -175,7 +176,7 @@ function HomePage() {
         <section className="mt-10 grid gap-6 lg:grid-cols-[2.2fr_1.05fr]">
           <div>
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-5xl font-extrabold">Upcoming Marquee Games</h2>
+              <h2 className="text-5xl font-extrabold">Upcoming Games</h2>
               <button 
                 onClick={() => navigate('/markets')}
                 className="flex items-center gap-2 text-xl font-semibold text-yellow-400 hover:text-yellow-500 transition"
@@ -186,35 +187,35 @@ function HomePage() {
             </div>
 
             <div className="space-y-5">
-              {loadingEvents ? (
+              {loadingGames ? (
                 [1, 2, 3].map((i) => (
                   <div
                     key={i}
                     className="h-[104px] rounded-3xl border border-zinc-800 bg-[#14161d] animate-pulse"
                   />
                 ))
-              ) : events.map((event) => (
+              ) : games.map((game) => (
                 <div
-                  key={event._id}
+                  key={game._id}
                   className="flex items-center justify-between rounded-3xl border border-zinc-800 bg-[#14161d] px-6 py-6"
                 >
                   <div className="flex items-center gap-5">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400 text-xl font-extrabold text-black">
-                      UCF
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2x text-5xl font-extrabol">
+                      {game.emoji}
                     </div>
 
                     <div>
                       <h3 className="text-2xl font-bold">
-                        {event.homeTeam} vs {event.awayTeam}
+                        {game.homeTeam} vs {game.awayTeam}
                       </h3>
                       <p className="mt-1 text-xl text-zinc-400">
-                        {event.date} • {event.time}
+                        {formatDate(game.bettingClosesAt)} • {formatTime(game.bettingClosesAt)}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    {event.status.toLowerCase() === 'open' ? (
+                    {game.status.toLowerCase() === 'live' ? (
                       <>
                         <span className="rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-lg font-semibold text-green-400">
                           Market Open

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const GameSchema = new mongoose.Schema({
-    sport: { type: String, default: '' },
+    sport: { type: String, default: 'Basketball' },
     homeTeam: { type: String, required: true },     
     awayTeam: { type: String, required: true },     
 
@@ -36,6 +36,10 @@ const GameSchema = new mongoose.Schema({
     scoreHome: { type: Number, default: 0, required: true },
     scoreAway: { type: Number, default: 0, required: true },
 
+
+    // Sport Emoji
+    emoji: { type: String, default: '🏀'},
+
     // Betting window timer
     bettingOpensAt:  { type: Date, required: true },
     bettingClosesAt: { type: Date, required: true },
@@ -63,58 +67,8 @@ GameSchema.virtual('computedStatus').get(function() {
 
 export const GameModel = mongoose.model('Game', GameSchema);
 
-export const getGames = () => GameModel.find();
+export const getGames = () => GameModel.find().sort({ bettingClosesAt: 1 });
 export const getGameById = (id: string) => GameModel.findById(id);
 export const createGame = (values: Record<string, any>) => GameModel.create(values);
 export const updateGameById = (id: string, values: Record<string, any>) => GameModel.findByIdAndUpdate(id, values, { returnDocument: 'after', runValidators: true });
 export const deleteGameById = (id: string) => GameModel.deleteOne({ _id: id });
-
-export const updateGameBetsById = async (id: string, team: string, teamBetPool: string, amount: number) => {
-
-    const game = await getGameById(id);
-    if (!game) {
-        return null;
-    }
-
-    const margin = 0.9;
-
-    const updatedGame = await updateGameById(
-        game._id.toString(),
-        [
-            { 
-                $set: {
-                    [team]: { 
-                        $add: [`$${team}`, 1] 
-                    },
-                    [teamBetPool]: { 
-                        $add: [`$${teamBetPool}`, amount] 
-                    },
-                    betPool: {
-                         $add: ["$betPool", amount] 
-                    }
-                }
-            },
-            {
-                $set: {
-
-                    // Calculating odds for each team after placing bet
-                    // newOdd = ( updatedBetPool / updatedPoolForTeamA ) * 0.9 -> Fixed 10% house margin
-                    "homeWin.odds": { 
-                        $multiply: [
-                            { $divide: ["$betPool", "$totalBetAmountHome"] },
-                            0.9 
-                        ]
-                    },
-                    "awayWin.odds": { 
-                        $multiply: [
-                             { $divide: ["$betPool", "$totalBetAmountAway"] },
-                            0.9 
-                        ]
-                    }
-                }
-            }
-        ]
-    )
-
-    return updatedGame;
-}

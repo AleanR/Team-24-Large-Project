@@ -12,8 +12,10 @@ interface Bet {
   odds: number
 }
 
-interface Marketgame {
+interface MarketGame {
   _id: string
+  sport: string
+  emoji: string
   homeTeam: string
   awayTeam: string
   status: string
@@ -27,15 +29,26 @@ interface Marketgame {
 function MarketsPage() {
   const [activeBets, setActiveBets] = useState<Bet[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  // Custom Dates
   const [selectedDateRange, setSelectedDateRange] = useState('')
   const [customDate, setCustomDate] = useState('')
-  const [games, setGames] = useState<Marketgame[]>([])
+
+  // FIX THIS PLEASE!!!!!!
+  // Custom Sports
+  const [selectedSports, setSelectedSports] = useState('')
+  const [sports, setSports] = useState<string[]>([])
+
+  // Custom Status
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [status, setStatus] = useState<string>('')
+
+  const [games, setGames] = useState<MarketGame[]>([])
   const [loadinggames, setLoadinggames] = useState(true)
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        const res = await fetch('/api/events')
+        const res = await fetch('/api/games')
         if (res.ok) setGames(await res.json())
       } catch {
         // silently fall back to empty
@@ -77,9 +90,16 @@ function MarketsPage() {
     setSearchQuery('')
     setSelectedDateRange('')
     setCustomDate('')
+
+
+    // FIX THIS PLEASE
+    setSelectedSports('')
+    setSports([])
+    setSelectedStatus('')
+    setStatus('')
   }
 
-  const handleAddToSlip = (game: Marketgame, marketType: string, selection: string, odds: number) => {
+  const handleAddToSlip = (game: MarketGame, marketType: string, selection: string, odds: number) => {
     const newBet: Bet = {
       id: `${game._id}-${marketType}-${selection}`,
       gameId: game._id,
@@ -140,6 +160,7 @@ function MarketsPage() {
                   All Games
                 </button>
 
+                {/* BY DATE */}
                 <button
                   onClick={() => {
                     setSelectedDateRange('custom')
@@ -161,6 +182,95 @@ function MarketsPage() {
                     onChange={(e) => setCustomDate(e.target.value)}
                     className="w-full rounded-xl border border-zinc-700 bg-[#181b22] px-3 py-2 text-sm text-white focus:border-yellow-400 focus:outline-none [color-scheme:dark]"
                   />
+                )}
+
+
+                {/* BY SPORTS */}
+                <button
+                  onClick={() => {
+                    setSelectedSports('custom')
+                  }}
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                    selectedDateRange === 'custom'
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
+                      : 'border-zinc-700 bg-[#181b22] text-white hover:border-zinc-600'
+                  }`}
+                >
+                  By Sports
+                </button>
+
+                {/* ////////// FIX FOR SPORTS ////////////////////// */}
+                {selectedSports === 'custom' && (
+                  <div className='flex flex-col'>
+                    <label className='p-2'>
+                      <input
+                        type='checkbox'
+                        name='Basketball 🏀'
+                        value="Basketball"
+                        className='w-5 h-5 accent-blue-500'
+                      />
+                      <span>Basketball</span>
+                    </label>
+                    <label className='p-2'>
+                      <input
+                        type='checkbox'
+                        value="Football"
+                        className='w-5 h-5 accent-blue-500'
+                      />
+                      <span>Football</span>
+                    </label>
+                    <label className='p-2'>
+                      <input
+                        type='checkbox'
+                        value="Soccer"
+                        className='w-5 h-5 accent-blue-500'
+                      />
+                      <span>Soccer</span>
+                    </label>
+                  </div>
+                )}
+                
+                {/* BY STATUS */}
+                <button
+                  onClick={() => {
+                    setSelectedStatus('custom')
+                  }}
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                    selectedDateRange === 'custom'
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
+                      : 'border-zinc-700 bg-[#181b22] text-white hover:border-zinc-600'
+                  }`}
+                >
+                  By Status
+                </button>
+
+                {selectedStatus === 'custom' && (
+                  <div>
+                    <label>
+                      <input 
+                      type="radio"
+                      value="live"
+                      name='status'
+                      />
+                      <span>Live</span>
+                    </label>
+                    <label>
+                      <input 
+                      type="radio"
+                      value="cancelled"
+                      name='status'
+                      />
+                      <span>Cancelled</span>
+                    </label>
+                    <label>
+                      <input 
+                      type="radio"
+                      value="finished"
+                      name='status'
+                      />
+                      <span>Finished</span>
+                    </label>
+                  </div>
                 )}
               </div>
             </div>
@@ -229,21 +339,24 @@ function MarketsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-5">
                     <div className="flex items-center gap-4">
-                      <div>
-                        <h2 className="text-2xl font-bold">{game.homeTeam}</h2>
-                        <p className="text-base text-zinc-400">
-                          {formatDate(game.bettingClosesAt)} • {formatTime(game.bettingClosesAt)}
-                        </p>
-                      </div>
+                        <h3 className="text-2xl font-bold">{game.emoji}  {game.homeTeam}</h3>
                     </div>
-
+                    <p className="text-base text-zinc-400">
+                        {formatDate(game.bettingClosesAt)} • {formatTime(game.bettingClosesAt)}
+                    </p>
                     <div className="flex items-center gap-4">
-                      <h3 className="text-2xl font-bold">{game.awayTeam}</h3>
+                      <h3 className="text-2xl font-bold">{game.emoji}   {game.awayTeam}</h3>
                     </div>
                   </div>
 
-                  <span className="rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-base font-semibold text-green-400">
-                    {game.status}
+                  <span className={`rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-base font-semibold text-green-400 ${
+                    game.status === 'live'
+                    ? 'border-green-500/40 bg-green-500/10 text-green-400 animate-pulse'
+                    : game.status === 'finished'
+                    ? 'border-green-500/40 bg-green-500/10 text-green-400'
+                    : 'border-zinc-600 bg-zinc-700/20 text-zinc-400'
+                  }`}>
+                    {game.status.toUpperCase()}
                   </span>
                 </div>
 

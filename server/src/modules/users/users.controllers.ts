@@ -3,35 +3,6 @@ import { deleteUserById, getUsers, updateUserById, UserModel, getUserById } from
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 
-const EventModel = mongoose.model.bind(mongoose);
-
-let Event: any;
-try {
-    Event = mongoose.model('Event');
-} catch {
-    const eventSchema = new mongoose.Schema({
-        homeTeam: String,
-        awayTeam: String,
-        date: String,
-        time: String,
-        status: { type: String, default: 'Open' },
-        homeEmoji: { type: String, default: '🏀' },
-        awayEmoji: { type: String, default: '🏀' },
-        moneyline: {
-            home: { label: String, odds: String },
-            away: { label: String, odds: String }
-        },
-    }, { timestamps: true });
-    Event = mongoose.model('Event', eventSchema);
-}
-
-const isAdminUser = async (req: AuthenticatedRequest): Promise<boolean> => {
-    if (!req.user) return false;
-    const user = await getUserById(req.user.id);
-    return user?.role === 'admin';
-};
-
-
 
 export const getPublicUser = async (req: Request, res: Response) => {
     try {
@@ -226,79 +197,6 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
         return res.status(200).json({ message: "User updated successfully", user: updatedUser });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export const getEvents = async (req: Request, res: Response) => {
-    try {
-        const events = await Event.find({ status: { $ne: 'Closed' } });
-        const parseMMDDYY = (d: string) => {
-            const [mm, dd, yy] = (d || '').split('-').map(Number);
-            return new Date(2000 + (yy || 0), (mm || 1) - 1, dd || 1).getTime();
-        };
-        const sorted = events.sort((a: any, b: any) => parseMMDDYY(a.date) - parseMMDDYY(b.date));
-        return res.status(200).json(sorted);
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export const adminGetEvents = async (req: AuthenticatedRequest, res: Response) => {
-    if (!(await isAdminUser(req))) return res.status(403).json({ message: "Forbidden" });
-    try {
-        const events = await Event.find().sort({ createdAt: -1 });
-        return res.status(200).json(events);
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export const adminCreateEvent = async (req: AuthenticatedRequest, res: Response) => {
-    if (!(await isAdminUser(req))) return res.status(403).json({ message: "Forbidden" });
-    try {
-        const { homeTeam, awayTeam, date, time, status, homeEmoji, awayEmoji, homeOdds, awayOdds } = req.body;
-        if (!homeTeam || !awayTeam || !date || !time) {
-            return res.status(400).json({ message: "homeTeam, awayTeam, date, and time are required" });
-        }
-        const event = await Event.create({
-            homeTeam,
-            awayTeam,
-            date,
-            time,
-            status: status || 'Open',
-            homeEmoji: homeEmoji || '🏀',
-            awayEmoji: awayEmoji || '🏀',
-            moneyline: {
-                home: { label: `${homeTeam} Win`, odds: homeOdds || '1.90' },
-                away: { label: `${awayTeam} Win`, odds: awayOdds || '1.90' },
-            },
-        });
-        return res.status(201).json(event);
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export const adminUpdateEvent = async (req: AuthenticatedRequest, res: Response) => {
-    if (!(await isAdminUser(req))) return res.status(403).json({ message: "Forbidden" });
-    try {
-        const { id } = req.params;
-        const updated = await Event.findByIdAndUpdate(id, { $set: req.body }, { new: true });
-        if (!updated) return res.status(404).json({ message: "Event not found" });
-        return res.status(200).json(updated);
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export const adminDeleteEvent = async (req: AuthenticatedRequest, res: Response) => {
-    if (!(await isAdminUser(req))) return res.status(403).json({ message: "Forbidden" });
-    try {
-        const { id } = req.params;
-        await Event.findByIdAndDelete(id);
-        return res.status(200).json({ message: "Event deleted" });
-    } catch (error) {
         return res.status(500).json({ message: "Internal server error" });
     }
 }

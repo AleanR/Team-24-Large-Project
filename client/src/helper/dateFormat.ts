@@ -1,5 +1,17 @@
 
 
+// Format ISO time string into yyyy-mm-dd
+export function formatEditDate (time: string) : string {
+
+    const date = new Date(time);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+// Format ISO string into abbreviated month (e.g. Apr, Mar) - day - year
 export function formatDate (dateString: string) : string {
 
     const date = new Date(dateString);
@@ -12,7 +24,7 @@ export function formatDate (dateString: string) : string {
     return formattedDate
 }
 
-
+// Format ISO string into local time (XX:XX AM/PM)
 export function formatTime (dateString: string) : string {
     const date = new Date(dateString);
 

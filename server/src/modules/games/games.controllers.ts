@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from '../../helpers/auth';
 import { refundPlayersByBets } from '../bets/bets.model';
 import { refund } from '../services/cancel.service';
 import { gameOver } from '../services/results.service';
-
+import { formatTime } from '../../helpers/time';
 
 // GET ALL GAMES
 export const getAllGames = async (req: AuthenticatedRequest, res: Response) => {
@@ -74,9 +74,11 @@ export const searchGames = async (req: Request, res: Response) => {
 // ADD GAMES
 export const addGame = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const { homeTeam, awayTeam, bettingOpensAt, bettingClosesAt } = req.body;
+        const {homeTeam, awayTeam, date, time, emoji, homeOdds, awayOdds } = req.body;
 
-        if (!homeTeam || !awayTeam || !bettingOpensAt || !bettingClosesAt) {
+
+        console.log(emoji);
+        if (!homeTeam || !awayTeam || !date || !time || !emoji || !homeOdds || !awayOdds) {
             return res.status(400).json({ message: "Missing required field(s)" });
         }
 
@@ -85,12 +87,12 @@ export const addGame = async (req: AuthenticatedRequest, res: Response) => {
         }
 
         // Validate Date instances for betting window
-        const betStart = new Date(bettingOpensAt);
-        const betClose = new Date(bettingClosesAt);
+        const betStart = new Date(Date.now());
+        const betClose = new Date(`${date}T${formatTime(time)}:00`);
 
         if (!(betStart instanceof Date && !isNaN(betStart.getTime()))
             || !(betClose instanceof Date && !isNaN(betClose.getTime()))) {
-                return res.status(400).json({ message: "Invalid dates" });
+                return res.status(402).json({ message: "Invalid dates" });
         }
 
         // Validate betting window
@@ -98,20 +100,20 @@ export const addGame = async (req: AuthenticatedRequest, res: Response) => {
             return res.status(400).json({ message: "Invalid betting window" });
         }
 
-        // Initialize odds: 50/50 with 10% house margin → 1/(0.5)*(1-0.1) = 1.80
-        const initOdds = 1.8;
-        const homeWin = { "label": `${homeTeam.split(' ')[1]} Win`, "odds": initOdds };
-        const awayWin = { "label": `${awayTeam.split(' ')[1]} Win`, "odds": initOdds };
+        const homeWin = { "label": `${homeTeam.split(' ')[1]} Win`, "odds": homeOdds };
+        const awayWin = { "label": `${awayTeam.split(' ')[1]} Win`, "odds": awayOdds };
 
 
         // creating Game
         await createGame({
+            sport: emoji.split(' ')[0],
             homeTeam: homeTeam,
             awayTeam: awayTeam,
             homeWin: homeWin,
             awayWin: awayWin,
             bettingOpensAt: betStart,
             bettingClosesAt: betClose,
+            emoji: emoji.split(' ')[1]
         });
 
         return res.status(201).json({
@@ -129,6 +131,9 @@ export const addGame = async (req: AuthenticatedRequest, res: Response) => {
 export const updateGame = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { id } = req.params;
+        const { homeTeam, awayTeam, date, time, emoji, homeOdds, awayOdds } = req.body;
+
+        let dateTime = '';
 
         if (!req.user) {
             return res.status(400).json({ message: "Unauthorized" });
@@ -137,12 +142,29 @@ export const updateGame = async (req: AuthenticatedRequest, res: Response) => {
             return res.status(400).json({ message: "Game ID is required" });
         }
 
-        const updated = await updateGameById(id, req.body);
-        
-        if (!updated) 
-            return res.status(404).json({ message: "Game not found" });
+        if (isNaN(Number(homeOdds)) || isNaN(Number(awayOdds))) {
+            return res.status(400).json({ message: "Odds must be integers" });
+        }
 
-        return res.status(200).json(updated);
+        const game = await getGameById(id);
+        if (!game) return res.status(400).json({ message: "Game not found" });
+
+        if (date && time) {
+            dateTime = `${date}T${formatTime(time)}:00`;
+        }
+        const newTime = new Date(dateTime);
+        
+        game.sport = emoji.split(' ')[0];
+        game.homeTeam = homeTeam;
+        game.awayTeam = awayTeam;
+        game.bettingClosesAt = newTime;
+        game.homeWin.odds = Number(homeOdds);
+        game.awayWin.odds = Number(awayOdds);
+        game.emoji = emoji.split(' ')[1];
+        
+        await game.save();
+
+        return res.status(200).json({ message: "Game updated successfully" });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Internal server error" });
