@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ContactSupportModal from './ContactSupportModal'
 
 type Props = {
   isVerified: boolean
@@ -10,6 +11,7 @@ export default function SecurityPanel({ isVerified }: Props) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [supportOpen, setSupportOpen] = useState(false)
 
   const handleResend = async () => {
     setSending(true)
@@ -33,6 +35,7 @@ export default function SecurityPanel({ isVerified }: Props) {
   }
 
   return (
+    <>
     <section className="rounded-3xl border border-zinc-800 bg-[#14161d] p-6">
       <h2 className="text-2xl font-extrabold text-white">Security</h2>
       <p className="mt-1 text-sm text-zinc-500">Manage your account security settings</p>
@@ -101,7 +104,27 @@ export default function SecurityPanel({ isVerified }: Props) {
             )}
           </div>
         </div>
+        {/* Contact Support */}
+        <div className="rounded-2xl bg-black px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-bold text-white">Contact Support</p>
+              <p className="mt-0.5 text-sm text-zinc-400">
+                Report an issue or ask a question
+              </p>
+            </div>
+            <button
+              onClick={() => setSupportOpen(true)}
+              className="shrink-0 rounded-xl border border-zinc-700 bg-[#181b22] px-4 py-2 text-sm font-semibold text-white transition hover:border-yellow-400 hover:text-yellow-400"
+            >
+              Contact Us
+            </button>
+          </div>
+        </div>
       </div>
     </section>
+
+    {supportOpen && <ContactSupportModal onClose={() => setSupportOpen(false)} />}
+    </>
   )
 }

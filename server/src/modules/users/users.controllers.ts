@@ -1,6 +1,7 @@
 import { AuthenticatedRequest } from '../../helpers/auth';
 import { deleteUserById, getUsers, updateUserById, UserModel, getUserById } from './users.model';
 import { Request, Response } from 'express';
+import { sendSupportEmail } from '../services/email.service';
 import mongoose from 'mongoose';
 
 
@@ -217,6 +218,34 @@ export const getRedemptions = async (req: AuthenticatedRequest, res: Response) =
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const contactSupport = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+
+        const { subject, message } = req.body;
+        if (!subject?.trim() || !message?.trim()) {
+            return res.status(400).json({ message: 'Subject and message are required.' });
+        }
+        if (subject.trim().length > 100) {
+            return res.status(400).json({ message: 'Subject must be 100 characters or less.' });
+        }
+        if (message.trim().length > 2000) {
+            return res.status(400).json({ message: 'Message must be 2000 characters or less.' });
+        }
+
+        const user = await getUserById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const fromName = `${user.firstname} ${user.lastname}`;
+        await sendSupportEmail(fromName, user.email, subject.trim(), message.trim());
+
+        return res.status(200).json({ message: 'Your message has been sent to support.' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Failed to send support email.' });
     }
 };
 
