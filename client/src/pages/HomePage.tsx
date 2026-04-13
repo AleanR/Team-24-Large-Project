@@ -44,7 +44,7 @@ function HomePage() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/leaderboard')
+    fetch('/api/users/leaderboard')
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setWinners(data.slice(0, 3)) })
       .catch(() => {})

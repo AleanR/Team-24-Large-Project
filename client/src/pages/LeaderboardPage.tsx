@@ -21,7 +21,7 @@ function LeaderboardPage() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch('/api/leaderboard')
+        const res = await fetch('/api/users/leaderboard')
         if (res.ok) {
           const data = await res.json()
           setLeaderboardData(data)
