@@ -27,6 +27,35 @@ export const sendPassResetToken = async (userEmail: string, url: string) => {
   });
 }
 
+export const sendSupportEmail = async (
+    fromName: string,
+    fromEmail: string,
+    subject: string,
+    message: string,
+) => {
+    const transporter = createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: getEmailAuth(),
+    });
+
+    await transporter.sendMail({
+        from: process.env.USER_EMAIL,
+        to: 'cadmus.fl@gmail.com',
+        replyTo: fromEmail,
+        subject: `[NitroPicks Support] ${subject}`,
+        html: `
+            <h2>Support Request</h2>
+            <p><strong>From:</strong> ${fromName} &lt;${fromEmail}&gt;</p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <hr/>
+            <p>${message.replace(/\n/g, '<br/>')}</p>
+        `,
+    });
+};
+
 export const sendEmailVerifOTP = async (userEmail: string, url: string) => {
   const transporter = createTransport({
     host: "smtp.gmail.com",

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+    contactSupport,
     deleteUser,
     earnPoints,
     getAllUsers,
@@ -25,5 +26,6 @@ export default (router: Router) => {
     router.get('/users/leaderboard', getLeaderboard);                    // public: leaderboard visible without login
     router.get('/users/:id', getPublicUser);                             // public: user profile for leaderboard View Profile
     router.get('/users/:id/redemptions', isAuthenticated, getRedemptions);
+    router.post('/users/support/contact', isAuthenticated, contactSupport);
     router.get('/users/:id', getPublicUser);                             // public: view profile from leaderboard
 }
