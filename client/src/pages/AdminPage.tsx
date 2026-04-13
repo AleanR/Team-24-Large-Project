@@ -208,21 +208,6 @@ function AdminPage() {
     }
   }
 
-  const _handleStatusToggle = async (event: any) => {
-    const nextStatus = event.status === '🏀' ? '🏈' : '⚽'
-    try {
-      await fetch(`/api/admin/events/${event._id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus }),
-      })
-      await fetchEvents()
-    } catch {
-      setError('Failed to update status')
-    }
-  }
-
   return (
     <div className="min-h-screen bg-black text-white">
       <Navigation />
