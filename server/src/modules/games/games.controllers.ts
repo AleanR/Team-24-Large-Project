@@ -289,13 +289,17 @@ export const getPublicGames = async (req: Request, res: Response) => {
             .select('sport homeTeam awayTeam homeWin awayWin scoreHome scoreAway emoji betPool numBettorsHome numBettorsAway totalBetAmountHome totalBetAmountAway bettingOpensAt bettingClosesAt status')
             .sort({ bettingOpensAt: 1 });
 
-        const todayStr = now.toDateString();
+        const startOfToday = new Date(now);
+        startOfToday.setUTCHours(0, 0, 0, 0);
+        const endOfToday = new Date(now);
+        endOfToday.setUTCHours(23, 59, 59, 999);
+
         const computed = games.map((g: any) => {
             const obj = g.toObject();
             if (obj.status === 'cancelled' || obj.status === 'finished') return obj;
             if (now > g.bettingClosesAt) {
                 obj.status = 'finished';
-            } else if (g.bettingClosesAt.toDateString() === todayStr) {
+            } else if (g.bettingClosesAt >= startOfToday && g.bettingClosesAt <= endOfToday) {
                 obj.status = 'live';
             } else {
                 obj.status = 'upcoming';
