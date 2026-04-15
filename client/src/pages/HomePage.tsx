@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { statCards, winners } from '../data/mockHomeData'
+import { statCards } from '../data/mockHomeData'
 import Navigation from '../components/Navigation'
-import { formatDate, formatTime } from '../helper/dateFormat'
+import { formatDate, formatTime } from '../helper/dateTimeFormat'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -10,6 +10,7 @@ function HomePage() {
   const [loading, setLoading] = useState(true)
   const [games, setGames] = useState<any[]>([])
   const [loadingGames, setLoadingGames] = useState(true)
+  const [winners, setWinners] = useState<any[]>([])
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,9 +38,16 @@ function HomePage() {
   useEffect(() => {
     fetch('/api/games')
       .then((r) => r.json())
-      .then((data) => setGames(Array.isArray(data) ? data : []))
+      .then((data) => setGames(Array.isArray(data) ? data.slice(0, 3) : []))
       .catch(() => {})
       .finally(() => setLoadingGames(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/users/leaderboard')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setWinners(data.slice(0, 3)) })
+      .catch(() => {})
   }, [])
 
   const handleGetStarted = () => {
@@ -214,27 +222,27 @@ function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
                     {game.status.toLowerCase() === 'live' ? (
                       <>
-                        <span className="rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-lg font-semibold text-green-400">
+                        <span className="rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-base font-semibold text-green-400 text-center">
                           Market Open
                         </span>
-                        <button 
+                        <button
                           onClick={() => navigate('/markets')}
-                          className="rounded-xl bg-yellow-400 px-5 py-3 text-lg font-bold text-black hover:bg-yellow-500 transition"
+                          className="rounded-xl bg-yellow-400 px-5 py-3 text-base font-bold text-black hover:bg-yellow-500 transition text-center"
                         >
                           View Market
                         </button>
                       </>
                     ) : (
                       <>
-                        <span className="rounded-full border border-zinc-600 bg-zinc-700/20 px-4 py-2 text-lg font-semibold text-zinc-400">
+                        <span className="rounded-full border border-zinc-600 bg-zinc-700/20 px-4 py-2 text-base font-semibold text-zinc-400 text-center">
                           Market Closed
                         </span>
-                        <button 
+                        <button
                           onClick={() => navigate('/markets')}
-                          className="rounded-xl bg-zinc-700 px-5 py-3 text-lg font-bold text-zinc-400 hover:bg-zinc-600 transition"
+                          className="rounded-xl bg-zinc-700 px-5 py-3 text-base font-bold text-zinc-400 hover:bg-zinc-600 transition text-center"
                         >
                           View Market
                         </button>
@@ -257,8 +265,10 @@ function HomePage() {
                 <p className="mb-6 text-lg text-zinc-300">Continued by top performers</p>
 
                 <div className="space-y-6">
-                  {winners.map((winner, index) => (
-                    <div key={winner.id}>
+                  {winners.length === 0 ? (
+                    <p className="text-zinc-500 text-sm">No data yet.</p>
+                  ) : winners.map((winner, index) => (
+                    <div key={winner.id ?? index}>
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-yellow-400 font-extrabold text-black">
@@ -267,11 +277,11 @@ function HomePage() {
 
                           <div>
                             <p className="text-2xl font-bold">{winner.name}</p>
-                            <p className="text-base text-zinc-400">{winner.subtitle}</p>
+                            <p className="text-base text-zinc-400">#{winner.rank} on leaderboard</p>
                           </div>
                         </div>
 
-                        <p className="text-2xl font-extrabold text-yellow-400">{winner.points}</p>
+                        <p className="text-2xl font-extrabold text-yellow-400">{winner.points} KP</p>
                       </div>
 
                       {index !== winners.length - 1 && (

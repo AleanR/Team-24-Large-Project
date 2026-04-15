@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import Navigation from '../components/Navigation'
 import StakeHandler from '../components/StakeHandler'
-import { formatDate, formatTime } from '../helper/dateFormat'
+import { formatDate, formatTime, gameStarted } from '../helper/dateTimeFormat'
+import GameTimer from '../components/Timer'
+import ContactSupportModal from './profile/components/ContactSupportModal'
 
 interface Bet {
   id: string
   gameId: string
   matchup: string
   marketType: string
+  team: 'home' | 'away'
   selection: string
   odds: number
 }
@@ -19,8 +23,8 @@ interface MarketGame {
   homeTeam: string
   awayTeam: string
   status: string
-  homeEmoji: string
-  awayEmoji: string
+  scoreHome: number
+  scoreAway: number
   homeWin: { label: string, odds: number }
   awayWin: { label: string, odds: number }
   bettingClosesAt: string
@@ -33,14 +37,16 @@ function MarketsPage() {
   const [selectedDateRange, setSelectedDateRange] = useState('')
   const [customDate, setCustomDate] = useState('')
 
-  // FIX THIS PLEASE!!!!!!
-  // Custom Sports
-  const [selectedSports, setSelectedSports] = useState('')
-  const [sports, setSports] = useState<string[]>([])
+  // Sports filter — set of selected sport names
+  const [selectedSports, setSelectedSports] = useState<Set<string>>(new Set())
+  const [showSportsFilter, setShowSportsFilter] = useState(false)
 
-  // Custom Status
+  // Status filter
   const [selectedStatus, setSelectedStatus] = useState('')
-  const [status, setStatus] = useState<string>('')
+  const [showStatusFilter, setShowStatusFilter] = useState(false)
+
+  // Contact support modal
+  const [supportOpen, setSupportOpen] = useState(false)
 
   const [games, setGames] = useState<MarketGame[]>([])
   const [loadinggames, setLoadinggames] = useState(true)
@@ -83,28 +89,66 @@ function MarketsPage() {
       if (formatDate(game.bettingClosesAt) !== converted) return false
     }
 
+    if (selectedSports.size > 0) {
+      if (!selectedSports.has(game.sport)) return false
+    }
+
+    if (selectedStatus) {
+      if (game.status !== selectedStatus) return false
+    }
+
     return true
+  })
+
+  const statusPriority: Record<string, number> = {
+    live: 0,
+    upcoming: 1,
+    finished: 2,
+  }
+
+  const sortedFilteredGames = [...filteredGames].sort((a, b) => {
+    const aPriority = statusPriority[a.status] ?? 99
+    const bPriority = statusPriority[b.status] ?? 99
+
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority
+    }
+
+    return new Date(a.bettingClosesAt).getTime() - new Date(b.bettingClosesAt).getTime()
   })
 
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedDateRange('')
     setCustomDate('')
-
-
-    // FIX THIS PLEASE
-    setSelectedSports('')
-    setSports([])
+    setSelectedSports(new Set())
+    setShowSportsFilter(false)
     setSelectedStatus('')
-    setStatus('')
+    setShowStatusFilter(false)
   }
 
-  const handleAddToSlip = (game: MarketGame, marketType: string, selection: string, odds: number) => {
+  const toggleSport = (sport: string) => {
+    setSelectedSports((prev) => {
+      const next = new Set(prev)
+      if (next.has(sport)) next.delete(sport)
+      else next.add(sport)
+      return next
+    })
+  }
+
+  const handleAddToSlip = (
+    game: MarketGame,
+    marketType: string,
+    team: 'home' | 'away',
+    selection: string,
+    odds: number,
+  ) => {
     const newBet: Bet = {
       id: `${game._id}-${marketType}-${selection}`,
       gameId: game._id,
       matchup: `${game.homeTeam} vs ${game.awayTeam}`,
       marketType,
+      team,
       selection,
       odds
     }
@@ -187,89 +231,60 @@ function MarketsPage() {
 
                 {/* BY SPORTS */}
                 <button
-                  onClick={() => {
-                    setSelectedSports('custom')
-                  }}
+                  onClick={() => setShowSportsFilter((v) => !v)}
                   className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
-                    selectedDateRange === 'custom'
+                    showSportsFilter || selectedSports.size > 0
                       ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
                       : 'border-zinc-700 bg-[#181b22] text-white hover:border-zinc-600'
                   }`}
                 >
-                  By Sports
+                  By Sports {selectedSports.size > 0 && `(${selectedSports.size})`}
                 </button>
 
-                {/* ////////// FIX FOR SPORTS ////////////////////// */}
-                {selectedSports === 'custom' && (
-                  <div className='flex flex-col'>
-                    <label className='p-2'>
-                      <input
-                        type='checkbox'
-                        name='Basketball 🏀'
-                        value="Basketball"
-                        className='w-5 h-5 accent-blue-500'
-                      />
-                      <span>Basketball</span>
-                    </label>
-                    <label className='p-2'>
-                      <input
-                        type='checkbox'
-                        value="Football"
-                        className='w-5 h-5 accent-blue-500'
-                      />
-                      <span>Football</span>
-                    </label>
-                    <label className='p-2'>
-                      <input
-                        type='checkbox'
-                        value="Soccer"
-                        className='w-5 h-5 accent-blue-500'
-                      />
-                      <span>Soccer</span>
-                    </label>
+                {showSportsFilter && (
+                  <div className="flex flex-col gap-1 rounded-xl border border-zinc-700 bg-[#181b22] p-3">
+                    {['Basketball', 'Football', 'Soccer', 'Baseball', 'Softball', 'Volleyball', 'Hockey'].map((sport) => (
+                      <label key={sport} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-800">
+                        <input
+                          type="checkbox"
+                          value={sport}
+                          checked={selectedSports.has(sport)}
+                          onChange={() => toggleSport(sport)}
+                          className="h-4 w-4 accent-yellow-400"
+                        />
+                        <span className="text-sm text-white">{sport}</span>
+                      </label>
+                    ))}
                   </div>
                 )}
-                
+
                 {/* BY STATUS */}
                 <button
-                  onClick={() => {
-                    setSelectedStatus('custom')
-                  }}
+                  onClick={() => setShowStatusFilter((v) => !v)}
                   className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
-                    selectedDateRange === 'custom'
+                    showStatusFilter || selectedStatus
                       ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
                       : 'border-zinc-700 bg-[#181b22] text-white hover:border-zinc-600'
                   }`}
                 >
-                  By Status
+                  By Status {selectedStatus && `(${selectedStatus})`}
                 </button>
 
-                {selectedStatus === 'custom' && (
-                  <div>
-                    <label>
-                      <input 
-                      type="radio"
-                      value="live"
-                      name='status'
-                      />
-                      <span>Live</span>
-                    </label>
-                    <label>
-                      <input 
-                      type="radio"
-                      value="cancelled"
-                      name='status'
-                      />
-                      <span>Cancelled</span>
-                    </label>
-                    <label>
-                      <input 
-                      type="radio"
-                      value="finished"
-                      name='status'
-                      />
-                      <span>Finished</span>
-                    </label>
+                {showStatusFilter && (
+                  <div className="flex flex-col gap-1 rounded-xl border border-zinc-700 bg-[#181b22] p-3">
+                    {['live', 'upcoming', 'finished'].map((s) => (
+                      <label key={s} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-800">
+                        <input
+                          type="radio"
+                          name="status"
+                          value={s}
+                          checked={selectedStatus === s}
+                          onChange={() => setSelectedStatus(selectedStatus === s ? '' : s)}
+                          className="h-4 w-4 accent-yellow-400"
+                        />
+                        <span className="text-sm capitalize text-white">{s}</span>
+                      </label>
+                    ))}
                   </div>
                 )}
               </div>
@@ -282,6 +297,22 @@ function MarketsPage() {
           >
             Clear Filters
           </button>
+
+          {/* Quick Links */}
+          <div className="mt-6 border-t border-zinc-800 pt-5">
+            <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-zinc-500">Quick Links</h3>
+            <div className="space-y-2">
+              <Link to="/bet-history" className="block rounded-xl px-3 py-2 text-sm font-semibold text-yellow-400 transition hover:bg-zinc-800">
+                Betting History
+              </Link>
+              <button
+                onClick={() => setSupportOpen(true)}
+                className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+              >
+                Contact Support
+              </button>
+            </div>
+          </div>
         </aside>
 
         <section>
@@ -329,34 +360,43 @@ function MarketsPage() {
                   />
                 ))}
               </div>
-            ) : filteredGames.length === 0 ? (
+            ) : sortedFilteredGames.length === 0 ? (
               <p className="text-zinc-400">No games found.</p>
-            ) : filteredGames.map((game) => (
+            ) : sortedFilteredGames.map((game) => (
               <div
                 key={game._id}
                 className="rounded-3xl border border-zinc-800 bg-[#14161d] p-6"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-5">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-10">
                         <h3 className="text-2xl font-bold">{game.emoji}  {game.homeTeam}</h3>
+                        {game.status === 'finished'
+                        ? <span className='text-3xl font-bold'>{game.scoreHome}</span>
+                        : ""}
                     </div>
                     <p className="text-base text-zinc-400">
                         {formatDate(game.bettingClosesAt)} • {formatTime(game.bettingClosesAt)}
                     </p>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-10">
                       <h3 className="text-2xl font-bold">{game.emoji}   {game.awayTeam}</h3>
+                      {game.status === 'finished'
+                        ? <span className='text-3xl font-bold'>{game.scoreAway}</span>
+                        : ""}
                     </div>
                   </div>
 
-                  <span className={`rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-base font-semibold text-green-400 ${
-                    game.status === 'live'
-                    ? 'border-green-500/40 bg-green-500/10 text-green-400 animate-pulse'
-                    : game.status === 'finished'
-                    ? 'border-green-500/40 bg-green-500/10 text-green-400'
+                  <span className={`rounded-full border px-4 py-2 text-base font-semibold ${
+                    game.status === 'upcoming'
+                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-400'
+                    : game.status === 'live'
+                    ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse'
                     : 'border-zinc-600 bg-zinc-700/20 text-zinc-400'
                   }`}>
-                    {game.status.toUpperCase()}
+                    {game.status === 'live' && gameStarted(game.bettingClosesAt)
+                    ? <GameTimer startTime={game.bettingClosesAt}></GameTimer>
+                    : game.status.toUpperCase()
+                    }
                   </span>
                 </div>
 
@@ -368,6 +408,7 @@ function MarketsPage() {
                         handleAddToSlip(
                           game,
                           'moneyline',
+                          'home',
                           game.homeWin.label,
                           game.homeWin.odds
                         )
@@ -405,6 +446,7 @@ function MarketsPage() {
                         handleAddToSlip(
                           game,
                           'moneyline',
+                          'away',
                           game.awayWin.label,
                           game.awayWin.odds
                         )
@@ -445,7 +487,8 @@ function MarketsPage() {
           </div>
         </section>
 
-        <aside className="space-y-5 min-h-[500px]">
+        <aside className="space-y-5">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
           <div className="rounded-3xl border border-zinc-800 bg-[#14161d] p-6">
             <div className="mb-6 flex items-start justify-between gap-4">
               <h2 className="text-2xl font-extrabold leading-tight">Active Mini Bet Slip</h2>
@@ -496,20 +539,21 @@ function MarketsPage() {
               </div>
             )}
 
-            {activeBets.length > 0 && <StakeHandler activeBets={activeBets} />}
+            {activeBets.length > 0 && (
+              <StakeHandler
+                activeBets={activeBets}
+                onBetPlaced={() => setActiveBets([])}
+              />
+            )}
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-[#14161d] p-6">
-            <h3 className="mb-8 text-2xl font-extrabold">Quick Links</h3>
-
-            <div className="space-y-4 text-xl">
-              <button className="block font-semibold text-yellow-400">Deposit History</button>
-              <button className="block font-semibold text-yellow-400">Betting History</button>
-              <button className="block text-zinc-400">Support</button>
-            </div>
           </div>
         </aside>
       </main>
+
+      {supportOpen && (
+        <ContactSupportModal onClose={() => setSupportOpen(false)} />
+      )}
     </div>
   )
 }

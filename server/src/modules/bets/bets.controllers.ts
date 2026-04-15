@@ -28,6 +28,21 @@ export const getMyBetsList = async (req: AuthenticatedRequest, res: Response) =>
     }
 };
 
+export const getUserBetsList = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        if (!id || Array.isArray(id)) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+
+        const bets = await getBetsByUserWithGames(id);
+        return res.status(200).json(bets);
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 export const getAllBets = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const bets = await getBets();
@@ -57,45 +72,6 @@ export const addBet = async (req: AuthenticatedRequest, res: Response) => {
         }
 
         const bet = await placeBet(req.user.id, stake, legs);
-
-        // Bet type consistency (single: 1 bet, parlay: >1 bet)
-        // const betType = legs.length === 1 ? 'single' : 'parlay';
-
-        // // Retrieve user ID from token
-        // const id = req.user.id;
-
-        // // Find if stake is sufficient
-        // const updatedUser = await updatePointBalanceById(id, stake);
-        // if (!updatedUser) {
-        //     return res.status(400).json({ message: "Insufficient points" });
-        // }
-
-        // // Ensure valid inputs for each leg
-        // for (const leg of legs) {
-        //     if (!leg.gameId || !leg.team || !leg.odds) {
-        //         return res.status(400).json({ message: "Invalid bet data" });
-        //     }
-
-        //     const team = leg.team === "home" ? "numBettorsHome" : "numBettorsAway";
-        //     const teamBetPool = leg.team === "home" ? "totalBetAmountHome" : "totalBetAmountAway";
-
-        //     const updatedGame = await updateGameBetsById(leg.gameId.toString(), team, teamBetPool, stake);
-        //     if (!updatedGame) {
-        //         return res.status(400).json({ message: "Invalid game (expired or betting window closed)" });
-        //     }
-        // }        
-
-        // const totalOdds = legs.reduce((acc: number, leg: any) => acc * leg.odds, 1)
-        // const expectedPayout = stake * totalOdds;
-
-        // const bet = await createBet({
-        //     userId: id,
-        //     stake,
-        //     betType,
-        //     legs,
-        //     totalOdds,
-        //     expectedPayout,
-        // });
 
 
         return res.status(201).json({
