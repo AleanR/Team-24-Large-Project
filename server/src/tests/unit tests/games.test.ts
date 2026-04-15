@@ -20,7 +20,7 @@ import { refund } from '../../modules/services/cancel.service';
 import { gameOver } from '../../modules/services/results.service';
 import { formatTime } from '../../helpers/time';
 
-vi.mock('./modules/games/games.model', () => ({
+vi.mock('../../modules/games/games.model', () => ({
   getGames: vi.fn(),
   getGameById: vi.fn(),
   createGame: vi.fn(),
@@ -32,19 +32,19 @@ vi.mock('./modules/games/games.model', () => ({
   },
 }));
 
-vi.mock('./modules/bets/bets.model', () => ({
+vi.mock('../../modules/bets/bets.model', () => ({
   refundPlayersByBets: vi.fn(),
 }));
 
-vi.mock('./modules/services/cancel.service', () => ({
+vi.mock('../../modules/services/cancel.service', () => ({
   refund: vi.fn(),
 }));
 
-vi.mock('./modules/services/results.service', () => ({
+vi.mock('../../modules/services/results.service', () => ({
   gameOver: vi.fn(),
 }));
 
-vi.mock('./helpers/time', () => ({
+vi.mock('../../helpers/time', () => ({
   formatTime: vi.fn(),
 }));
 

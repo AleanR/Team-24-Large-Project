@@ -5,13 +5,13 @@ import { UserModel } from '../../modules/users/users.model';
 import { createTransport } from 'nodemailer';
 
 // Mock reward model
-vi.mock('./modules/rewards/rewards.model', () => ({
+vi.mock('../../modules/rewards/rewards.model', () => ({
   getActiveRewards: vi.fn(),
   getRewardById: vi.fn(),
 }));
 
 // Mock user model
-vi.mock('./modules/users/users.model', () => ({
+vi.mock('../../modules/users/users.model', () => ({
   UserModel: {
     findById: vi.fn(),
   },

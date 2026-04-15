@@ -6,7 +6,7 @@ import { createToken } from '../../helpers/jwt';
 import { sendEmailVerifOTP } from '../../modules/services/email.service';
 
 // Mock dependencies used by the controller
-vi.mock('./modules/users/users.model', () => ({
+vi.mock('../../modules/users/users.model', () => ({
   getUserByEmail: vi.fn(),
   createUser: vi.fn(),
   getUserById: vi.fn(),
@@ -15,17 +15,17 @@ vi.mock('./modules/users/users.model', () => ({
   },
 }));
 
-vi.mock('./helpers', () => ({
+vi.mock('../../helpers', () => ({
   comparePassword: vi.fn(),
   hashPassword: vi.fn(),
 }));
 
-vi.mock('./helpers/jwt', () => ({
+vi.mock('../../helpers/jwt', () => ({
   createToken: vi.fn(),
   verifyToken: vi.fn(),
 }));
 
-vi.mock('./modules/services/email.service', () => ({
+vi.mock('../../modules/services/email.service', () => ({
   sendEmailVerifOTP: vi.fn(),
 }));
 

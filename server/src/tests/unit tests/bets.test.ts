@@ -16,7 +16,7 @@ import {
 } from '../../modules/bets/bets.model';
 import { placeBet } from '../../modules/services/bet.service';
 
-vi.mock('./modules/bets/bets.model', () => ({
+vi.mock('../../modules/bets/bets.model', () => ({
   createBet: vi.fn(),
   deleteBetById: vi.fn(),
   getBetById: vi.fn(),
@@ -25,11 +25,11 @@ vi.mock('./modules/bets/bets.model', () => ({
   getBetsByUserWithGames: vi.fn(),
 }));
 
-vi.mock('./modules/users/users.model', () => ({
+vi.mock('../../modules/users/users.model', () => ({
   deductKnightPoints: vi.fn(),
 }));
 
-vi.mock('./modules/services/bet.service', () => ({
+vi.mock('../../modules/services/bet.service', () => ({
   placeBet: vi.fn(),
 }));
 

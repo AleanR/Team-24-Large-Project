@@ -21,7 +21,7 @@ import {
 } from '../../modules/users/users.model';
 import { sendSupportEmail } from '../../modules/services/email.service';
 
-vi.mock('./modules/users/users.model', () => ({
+vi.mock('../../modules/users/users.model', () => ({
   deleteUserById: vi.fn(),
   getUsers: vi.fn(),
   updateUserById: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('./modules/users/users.model', () => ({
   },
 }));
 
-vi.mock('./modules/services/email.service', () => ({
+vi.mock('../../modules/services/email.service', () => ({
   sendSupportEmail: vi.fn(),
 }));
 
