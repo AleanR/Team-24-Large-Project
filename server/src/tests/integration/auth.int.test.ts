@@ -1,0 +1,98 @@
+import request from 'supertest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app';
+
+vi.mock('../../modules/users/users.model', () => ({
+  getUserByEmail: vi.fn(() => ({
+    select: vi.fn().mockResolvedValue(null),
+  })),
+  createUser: vi.fn(),
+  getUserById: vi.fn(),
+  UserModel: {
+    findOne: vi.fn(),
+  },
+}));
+
+vi.mock('../../helpers', () => ({
+  comparePassword: vi.fn(),
+  hashPassword: vi.fn(),
+}));
+
+vi.mock('../../helpers/jwt', () => ({
+  createToken: vi.fn(),
+  verifyToken: vi.fn(),
+}));
+
+vi.mock('../../modules/services/email.service', () => ({
+  sendEmailVerifOTP: vi.fn(),
+  sendSupportEmail: vi.fn(),
+}));
+
+describe('Authentication integration', () => {
+  let app: ReturnType<typeof createApp>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = createApp();
+  });
+
+  it('POST /api/auth/login returns 400 when email/password are missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: '' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Email and password required!',
+    });
+  });
+
+  it('POST /api/auth/register returns 400 when required fields are missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        firstname: 'Jase',
+        lastname: 'Thomas',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Missing required field(s)',
+    });
+  });
+
+  it('POST /api/users/auth/register returns 400 when required fields are missing', async () => {
+    const res = await request(app)
+      .post('/api/users/auth/register')
+      .send({
+        firstname: 'Jase',
+        lastname: 'Thomas',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Missing required field(s)',
+    });
+  });
+
+  it('POST /api/auth/logout returns 200', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      message: 'User logged out successfully',
+    });
+  });
+
+  it('GET /api/auth/verify-email returns 401 when token is missing', async () => {
+    const res = await request(app)
+      .get('/api/auth/verify-email');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      message: 'Invalid token',
+    });
+  });
+});
