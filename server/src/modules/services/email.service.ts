@@ -52,3 +52,30 @@ export const sendEmailVerifOTP = async (userEmail: string, url: string) => {
     console.error("Verification email failed:", err);
   }
 };
+
+export const sendSupportEmail = async (fromName: string, replyTo: string, subject: string, message: string) => {
+  try {
+    const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || "support@nitropicks.xyz";
+    const { error } = await resend.emails.send({
+      from,
+      to: [supportEmail],
+      reply_to: replyTo,
+      subject: `[Support] ${subject}`,
+      html: `
+        <h2>Support Request from ${fromName}</h2>
+        <p><strong>From:</strong> ${fromName} (${replyTo})</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <hr />
+        <p>${message.replace(/\n/g, '<br />')}</p>
+      `,
+    });
+
+    if (error) {
+      console.error("Support email failed:", error);
+    } else {
+      console.log("Support email sent from:", replyTo);
+    }
+  } catch (err) {
+    console.error("Support email failed:", err);
+  }
+};
