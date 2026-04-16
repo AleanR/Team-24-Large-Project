@@ -10,7 +10,7 @@ vi.mock('resend', () => ({
       send: vi.fn().mockResolvedValue({ error: null }),
     },
   })),
-}), { virtual: true });
+}));
 
 vi.mock('../../modules/users/users.model', () => ({
   deleteUserById: vi.fn(),

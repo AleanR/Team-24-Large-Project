@@ -13,7 +13,7 @@ vi.mock('resend', () => ({
       send: vi.fn().mockResolvedValue({ error: null }),
     },
   })),
-}), { virtual: true });
+}));
 
 // Mock bets model dependencies used by bets controllers
 vi.mock('../../modules/bets/bets.model', () => ({

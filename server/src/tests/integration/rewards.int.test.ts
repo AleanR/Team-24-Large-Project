@@ -9,7 +9,7 @@ vi.mock('resend', () => ({
       send: vi.fn().mockResolvedValue({ error: null }),
     },
   })),
-}), { virtual: true });
+}));
 
 // Mock rewards dependencies
 vi.mock('../../modules/rewards/rewards.model', () => ({

@@ -22,7 +22,7 @@ vi.mock('resend', () => ({
       send: vi.fn().mockResolvedValue({ error: null }),
     },
   })),
-}), { virtual: true });
+}));
 
 vi.mock('../../modules/games/games.model', () => ({
   getGames: vi.fn(),
