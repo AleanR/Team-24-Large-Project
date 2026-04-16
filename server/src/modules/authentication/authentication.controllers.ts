@@ -77,6 +77,8 @@ export const register = async (req: Request, res: Response) => {
 
         const hashedPass = await hashPassword(password);
 
+        const isProduction = !!process.env.CLIENT_URL;
+
         const user = await createUser({
             firstname,
             lastname,
@@ -84,7 +86,7 @@ export const register = async (req: Request, res: Response) => {
             major,
             knightPoints: 1000,
             email,
-            isVerified: false,
+            isVerified: !isProduction,
             username,
             authentication: {
                 password: hashedPass,
@@ -93,14 +95,18 @@ export const register = async (req: Request, res: Response) => {
 
         const token = await createToken(user._id.toString(), user.email);
 
-        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-        const otpUrl = `${clientUrl}/verify-email?token=${token}`;
-
-        await sendEmailVerifOTP(user.email, otpUrl);    // Use email service to send email verification token
-
+        if (isProduction) {
+            const otpUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+            await sendEmailVerifOTP(user.email, otpUrl);
+            return res.status(201).json({
+                message: "Email Verification OTP Sent!",
+                token,
+            });
+        }
 
         return res.status(201).json({
-            message: "Email Verification OTP Sent!",
+            message: "Account created successfully!",
+            token,
         });
             
     } catch (error) {
