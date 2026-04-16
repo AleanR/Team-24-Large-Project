@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { login, register } from '../../modules/authentication/authentication.controllers';
 import { getUserByEmail, createUser, UserModel } from '../../modules/users/users.model';
 import { comparePassword, hashPassword } from '../../helpers';
@@ -32,6 +32,7 @@ vi.mock('../../modules/services/email.service', () => ({
 describe('authentication.controllers', () => {
   let req: any;
   let res: any;
+  const originalClientUrl = process.env.CLIENT_URL;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,6 +48,10 @@ describe('authentication.controllers', () => {
       cookie: vi.fn().mockReturnThis(),
       clearCookie: vi.fn().mockReturnThis(),
     };
+  });
+
+  afterEach(() => {
+    process.env.CLIENT_URL = originalClientUrl;
   });
 
   describe('login', () => {
@@ -111,7 +116,7 @@ describe('authentication.controllers', () => {
         password: 'test1234',
       };
 
-      const fakeUser = {
+      const authUser = {
         _id: { toString: () => '123' },
         email: 'jase@ucf.edu',
         isVerified: true,
@@ -119,6 +124,9 @@ describe('authentication.controllers', () => {
         authentication: {
           password: 'hashed-password',
         },
+      };
+
+      const safeUser = {
         toObject: () => ({
           email: 'jase@ucf.edu',
           isVerified: true,
@@ -126,8 +134,12 @@ describe('authentication.controllers', () => {
         }),
       };
 
-      const selectMock = vi.fn().mockResolvedValue(fakeUser);
-      (getUserByEmail as any).mockReturnValue({ select: selectMock });
+      const selectMock = vi.fn().mockResolvedValue(authUser);
+
+      (getUserByEmail as any)
+        .mockReturnValueOnce({ select: selectMock })
+        .mockResolvedValueOnce(safeUser);
+
       (comparePassword as any).mockResolvedValue(true);
       (createToken as any).mockResolvedValue('fake-jwt-token');
 
@@ -221,7 +233,40 @@ describe('authentication.controllers', () => {
       });
     });
 
-    it('returns 201 on successful register', async () => {
+    it('returns 201 on successful register in non-production mode', async () => {
+      delete process.env.CLIENT_URL;
+
+      req.body = {
+        firstname: 'Jase',
+        lastname: 'Thomas',
+        ucfID: '1234567',
+        major: 'Computer Science',
+        email: 'jase@ucf.edu',
+        password: 'test1234',
+        username: 'jaset',
+      };
+
+      (UserModel.findOne as any).mockResolvedValue(null);
+      (hashPassword as any).mockResolvedValue('hashed-password');
+      (createUser as any).mockResolvedValue({
+        _id: { toString: () => '123' },
+        email: 'jase@ucf.edu',
+      });
+      (createToken as any).mockResolvedValue('fake-jwt-token');
+
+      await register(req, res);
+
+      expect(sendEmailVerifOTP).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Account created successfully!',
+        token: 'fake-jwt-token',
+      });
+    });
+
+    it('returns 201 on successful register in production mode', async () => {
+      process.env.CLIENT_URL = 'https://nitropicks.xyz';
+
       req.body = {
         firstname: 'Jase',
         lastname: 'Thomas',
@@ -243,10 +288,13 @@ describe('authentication.controllers', () => {
 
       await register(req, res);
 
+      expect(sendEmailVerifOTP).toHaveBeenCalledWith(
+        'jase@ucf.edu',
+        'https://nitropicks.xyz/verify-email?token=fake-jwt-token'
+      );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         message: 'Email Verification OTP Sent!',
-        otpUrl: expect.stringContaining('/verify-email?token=fake-jwt-token'),
         token: 'fake-jwt-token',
       });
     });
