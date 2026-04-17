@@ -9,4 +9,5 @@ export default (router: Router) => {
     router.post('/users/auth/logout', logout);
     router.get('/users/auth/verify-email', verifyEmail);
     router.post('/users/auth/resend-verification', isAuthenticated, resendVerification);
+    router.get('/auth/me', isAuthenticated, getCurrentUser);
 };

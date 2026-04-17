@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -32,18 +32,22 @@ function App() {
             <Route path="/reset-password/:token" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
 
             {/* Fully public routes */}
+            <Route path="/"              element={<HomePage />} />
+            <Route path="/markets"       element={<MarketsPage />} />
             <Route path="/verify-email"   element={<VerifyEmailPage />} />
             <Route path="/leaderboard"    element={<LeaderboardPage />} />
             <Route path="/profile/:id"    element={<UserProfilePage />} />
 
             {/* Protected routes — redirect to /login if not authenticated */}
-            <Route path="/"              element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/markets"       element={<ProtectedRoute><MarketsPage /></ProtectedRoute>} />
             <Route path="/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/admin"         element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="/earn-points"   element={<ProtectedRoute><EarnPointsPage /></ProtectedRoute>} />
             <Route path="/redeem-points" element={<ProtectedRoute><RedeemPointsPage /></ProtectedRoute>} />
             <Route path="/bet-history"   element={<ProtectedRoute><BetHistoryPage /></ProtectedRoute>} />
+
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+
           </Routes>
         </Suspense>
       </AuthProvider>
