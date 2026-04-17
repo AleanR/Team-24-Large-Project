@@ -401,7 +401,7 @@ function MarketsPage() {
 
                   <span className={`rounded-full border px-4 py-2 text-base font-semibold ${
                     game.status === 'upcoming'
-                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-400'
+                    ? 'border-green-500/40 bg-green-500/10 text-green-400'
                     : game.status === 'live'
                     ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse'
                     : 'border-zinc-600 bg-zinc-700/20 text-zinc-400'
