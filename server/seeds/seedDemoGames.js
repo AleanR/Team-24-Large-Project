@@ -41,7 +41,6 @@ const GameSchema = new mongoose.Schema({
 const Game = mongoose.models.Game || mongoose.model('Game', GameSchema);
 
 const hours = h => h * 60 * 60 * 1000;
-const days  = d => d * 24 * 60 * 60 * 1000;
 
 const SPORT_EMOJI = {
     'Basketball': '🏀',
@@ -53,6 +52,21 @@ const SPORT_EMOJI = {
 };
 
 const now = new Date();
+
+// at(dayOffset, hour, min) — e.g. at(-1, 19) = yesterday at 7:00 PM
+const at = (dayOffset, hour, min = 0) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + dayOffset);
+    d.setHours(hour, min, 0, 0);
+    return d;
+};
+
+// liveClose(hoursAgo) — rounds back to the top of the hour so times look clean
+const liveClose = hoursAgo => {
+    const d = new Date(now.getTime() - hours(hoursAgo));
+    d.setMinutes(0, 0, 0);
+    return d;
+};
 
 const demoGames = [
 
@@ -66,8 +80,8 @@ const demoGames = [
         scoreAway: 74,
         winner: 'home',
         status: 'finished',
-        bettingOpensAt:  new Date(now.getTime() - hours(48)),
-        bettingClosesAt: new Date(now.getTime() - hours(3)),
+        bettingOpensAt:  at(-2, 9),        // 2 days ago 9:00 AM
+        bettingClosesAt: at(-1, 19),       // yesterday 7:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.9 },
         awayWin: { label: 'Florida Gators Win', odds: 1.7 },
         betPool: 500, totalBetAmountHome: 300, totalBetAmountAway: 200,
@@ -81,8 +95,8 @@ const demoGames = [
         scoreAway: 3,
         winner: 'away',
         status: 'finished',
-        bettingOpensAt:  new Date(now.getTime() - hours(48)),
-        bettingClosesAt: new Date(now.getTime() - hours(5)),
+        bettingOpensAt:  at(-2, 9),        // 2 days ago 9:00 AM
+        bettingClosesAt: at(-1, 17),       // yesterday 5:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 2.1 },
         awayWin: { label: 'FSU Seminoles Win', odds: 1.6 },
         betPool: 400, totalBetAmountHome: 150, totalBetAmountAway: 250,
@@ -96,15 +110,15 @@ const demoGames = [
         scoreAway: 4,
         winner: 'home',
         status: 'finished',
-        bettingOpensAt:  new Date(now.getTime() - hours(48)),
-        bettingClosesAt: new Date(now.getTime() - hours(2)),
+        bettingOpensAt:  at(-3, 10),       // 3 days ago 10:00 AM
+        bettingClosesAt: at(-2, 14),       // 2 days ago 2:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'FIU Panthers Win', odds: 1.8 },
         betPool: 300, totalBetAmountHome: 150, totalBetAmountAway: 150,
     },
 
-    // ── 3 LIVE — bettingClosesAt is in the past so getPublicGames computes status='live'
-    //            (the controller sets live when now >= bettingClosesAt)
+    // ── 3 LIVE — bettingClosesAt is in the past (top of the hour) so getPublicGames
+    //            computes status='live' (controller: live when now >= bettingClosesAt)
     {
         sport: 'Basketball',
         emoji: SPORT_EMOJI['Basketball'],
@@ -114,8 +128,8 @@ const demoGames = [
         scoreAway: 0,
         winner: '',
         status: 'live',
-        bettingOpensAt:  new Date(now.getTime() - hours(6)),
-        bettingClosesAt: new Date(now.getTime() - hours(1)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM
+        bettingClosesAt: liveClose(1),     // ~1 hr ago (top of that hour)
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Miami Hurricanes Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -129,8 +143,8 @@ const demoGames = [
         scoreAway: 0,
         winner: '',
         status: 'live',
-        bettingOpensAt:  new Date(now.getTime() - hours(5)),
-        bettingClosesAt: new Date(now.getTime() - hours(2)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM
+        bettingClosesAt: liveClose(3),     // ~3 hrs ago (top of that hour)
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'South Florida Bulls Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -144,14 +158,14 @@ const demoGames = [
         scoreAway: 0,
         winner: '',
         status: 'live',
-        bettingOpensAt:  new Date(now.getTime() - hours(4)),
-        bettingClosesAt: new Date(now.getTime() - hours(1)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM
+        bettingClosesAt: liveClose(2),     // ~2 hrs ago (top of that hour)
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Bethune-Cookman Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
     },
 
-    // ── 4 UPCOMING — future days ──────────────────────────────────────────────
+    // ── 4 UPCOMING — betting open now, games at realistic evening/afternoon times
     {
         sport: 'Soccer',
         emoji: SPORT_EMOJI['Soccer'],
@@ -159,8 +173,8 @@ const demoGames = [
         awayTeam: 'Florida Atlantic',
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
-        bettingOpensAt:  new Date(now.getTime() + hours(12)),
-        bettingClosesAt: new Date(now.getTime() + days(1) + hours(2)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM (betting open)
+        bettingClosesAt: at(1, 19),        // tomorrow 7:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Florida Atlantic Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -172,8 +186,8 @@ const demoGames = [
         awayTeam: 'Kansas Jayhawks',
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
-        bettingOpensAt:  new Date(now.getTime() + hours(18)),
-        bettingClosesAt: new Date(now.getTime() + days(2) + hours(4)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM (betting open)
+        bettingClosesAt: at(2, 19, 30),    // 2 days from now 7:30 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Kansas Jayhawks Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -185,8 +199,8 @@ const demoGames = [
         awayTeam: 'Tulane Green Wave',
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
-        bettingOpensAt:  new Date(now.getTime() + days(1)),
-        bettingClosesAt: new Date(now.getTime() + days(3) + hours(1)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM (betting open)
+        bettingClosesAt: at(3, 17),        // 3 days from now 5:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Tulane Green Wave Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -198,8 +212,8 @@ const demoGames = [
         awayTeam: 'Memphis Tigers',
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
-        bettingOpensAt:  new Date(now.getTime() + days(2)),
-        bettingClosesAt: new Date(now.getTime() + days(4) + hours(3)),
+        bettingOpensAt:  at(0, 9),         // today 9:00 AM (betting open)
+        bettingClosesAt: at(4, 14),        // 4 days from now 2:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Memphis Tigers Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
