@@ -3,7 +3,7 @@
  *
  * Demo setup for presentation:
  *   3 Finished games  — real scores, winner set
- *  10 Upcoming games  — betting closes at 1-hour intervals from now
+ *  10 Upcoming games  — betting closes at 1-hour intervals starting tomorrow 12 PM
  *
  * Run from the server/ directory:
  *   node seeds/seedDemoGames.js
@@ -39,8 +39,6 @@ const GameSchema = new mongoose.Schema({
 
 const Game = mongoose.models.Game || mongoose.model('Game', GameSchema);
 
-const hours = h => h * 60 * 60 * 1000;
-
 const SPORT_EMOJI = {
     'Basketball': '🏀',
     'Football':   '🏈',
@@ -52,8 +50,13 @@ const SPORT_EMOJI = {
 
 const now = new Date();
 
-// fromNow(h) — exactly h hours from now
-const fromNow = h => new Date(now.getTime() + hours(h));
+// tomorrow(hour, min) — tomorrow at a fixed clock time
+const tomorrow = (hour, min = 0) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    d.setHours(hour, min, 0, 0);
+    return d;
+};
 
 // ago(dayOffset, hour, min) — e.g. ago(-2, 9) = 2 days ago at 9:00 AM
 const ago = (dayOffset, hour, min = 0) => {
@@ -112,7 +115,7 @@ const demoGames = [
         betPool: 300, totalBetAmountHome: 150, totalBetAmountAway: 150,
     },
 
-    // ── 10 UPCOMING — bettingClosesAt at 1-hour intervals from now ────────────
+    // ── 10 UPCOMING — bettingClosesAt at 1-hour intervals, tomorrow 12 PM–9 PM ─
     {
         sport: 'Basketball',
         emoji: SPORT_EMOJI['Basketball'],
@@ -121,7 +124,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(1),       // now + 1 hr
+        bettingClosesAt: tomorrow(12),     // tomorrow 12:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Miami Hurricanes Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -134,7 +137,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(2),       // now + 2 hrs
+        bettingClosesAt: tomorrow(13),     // tomorrow 1:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'South Florida Bulls Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -147,7 +150,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(3),       // now + 3 hrs
+        bettingClosesAt: tomorrow(14),     // tomorrow 2:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Bethune-Cookman Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -160,7 +163,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(4),       // now + 4 hrs
+        bettingClosesAt: tomorrow(15),     // tomorrow 3:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Florida Atlantic Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -173,7 +176,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(5),       // now + 5 hrs
+        bettingClosesAt: tomorrow(16),     // tomorrow 4:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Kansas Jayhawks Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -186,7 +189,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(6),       // now + 6 hrs
+        bettingClosesAt: tomorrow(17),     // tomorrow 5:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Tulane Green Wave Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -199,7 +202,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(7),       // now + 7 hrs
+        bettingClosesAt: tomorrow(18),     // tomorrow 6:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Memphis Tigers Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -212,7 +215,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(8),       // now + 8 hrs
+        bettingClosesAt: tomorrow(19),     // tomorrow 7:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'USF Bulls Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -225,7 +228,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(9),       // now + 9 hrs
+        bettingClosesAt: tomorrow(20),     // tomorrow 8:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Cincinnati Bearcats Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
@@ -238,7 +241,7 @@ const demoGames = [
         scoreHome: 0, scoreAway: 0, winner: '',
         status: 'upcoming',
         bettingOpensAt:  ago(0, 9),
-        bettingClosesAt: fromNow(10),      // now + 10 hrs
+        bettingClosesAt: tomorrow(21),     // tomorrow 9:00 PM
         homeWin: { label: 'UCF Knights Win', odds: 1.8 },
         awayWin: { label: 'Houston Cougars Win', odds: 1.8 },
         betPool: 200, totalBetAmountHome: 100, totalBetAmountAway: 100,
